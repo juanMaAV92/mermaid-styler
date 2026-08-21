@@ -1,0 +1,36 @@
+---
+interface Props {
+  source: string;
+  sourceHint: string;
+  placeholder: string;
+}
+
+const { source, sourceHint, placeholder } = Astro.props;
+---
+
+<section class="panel panel--editor" aria-labelledby="source-title">
+  <div class="panel-head">
+    <div>
+      <span class="panel-label">INPUT</span>
+      <h2 id="source-title">Source</h2>
+    </div>
+    <span class="panel-meta" data-source-count>0 chars</span>
+  </div>
+  <div class="editor-wrap">
+    <textarea
+      id="mermaid-source"
+      class="source-input"
+      name="mermaid-source"
+      spellcheck="false"
+      autocomplete="off"
+      autocapitalize="off"
+      data-source-input
+      aria-describedby="source-hint"
+      placeholder={placeholder}
+    >{source}</textarea>
+  </div>
+  <div class="panel-foot">
+    <span id="source-hint">{sourceHint}</span>
+    <span class="keyboard-hint"><kbd>⌘</kbd><kbd>↵</kbd> render later</span>
+  </div>
+</section>

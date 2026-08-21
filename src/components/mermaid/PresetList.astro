@@ -1,0 +1,30 @@
+---
+interface Preset {
+  id: string;
+  label: string;
+  colors: string[];
+}
+
+interface Props {
+  presets: Preset[];
+}
+
+const { presets } = Astro.props;
+---
+
+<div class="preset-list" role="listbox" aria-label="Diagram presets">
+  {presets.map((preset, index) => (
+    <button
+      class:list={['preset-option', index === 0 && 'is-selected']}
+      type="button"
+      role="option"
+      aria-selected={index === 0}
+      data-preset={preset.id}
+    >
+      <span class="preset-swatches" aria-hidden="true">
+        {preset.colors.map((color) => <span style={`--swatch-color: ${color}`}></span>)}
+      </span>
+      <span>{preset.label}</span>
+    </button>
+  ))}
+</div>

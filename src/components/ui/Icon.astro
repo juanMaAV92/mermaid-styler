@@ -1,0 +1,37 @@
+---
+interface Props {
+  name: 'copy' | 'download' | 'reset' | 'spark' | 'arrow';
+  size?: number;
+}
+
+const { name, size = 16 } = Astro.props;
+---
+
+{name === 'copy' && (
+  <svg class="icon" width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+    <rect x="8" y="8" width="11" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.7" />
+    <path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8" fill="none" stroke="currentColor" stroke-width="1.7" />
+  </svg>
+)}
+{name === 'download' && (
+  <svg class="icon" width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M12 4v11m0 0 4-4m-4 4-4-4M5 19h14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+  </svg>
+)}
+{name === 'reset' && (
+  <svg class="icon" width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M5 8a7 7 0 1 1 1 9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+    <path d="M5 4v4h4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+  </svg>
+)}
+{name === 'spark' && (
+  <svg class="icon" width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+    <path d="m12 3 1.25 5.75L19 10l-5.75 1.25L12 17l-1.25-5.75L5 10l5.75-1.25L12 3Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" />
+    <path d="m19 15 .55 2.45L22 18l-2.45.55L19 21l-.55-2.45L16 18l2.45-.55L19 15Z" fill="currentColor" />
+  </svg>
+)}
+{name === 'arrow' && (
+  <svg class="icon" width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M5 12h13m-5-5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+  </svg>
+)}

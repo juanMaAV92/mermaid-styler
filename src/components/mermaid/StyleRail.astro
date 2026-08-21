@@ -1,0 +1,91 @@
+---
+import ColorField from '../ui/ColorField.astro';
+import Icon from '../ui/Icon.astro';
+import PresetList from './PresetList.astro';
+
+interface Props {
+  labels: {
+    preset: string;
+    colors: string;
+    typography: string;
+    background: string;
+    primaryColor: string;
+    borderColor: string;
+    textColor: string;
+    lineColor: string;
+    accentColor: string;
+    fontFamily: string;
+    textSize: string;
+    transparent: string;
+    resetStyles: string;
+  };
+}
+
+const { labels } = Astro.props;
+const presets = [
+  { id: 'light', label: 'Light', colors: ['#f4f1e8', '#d8eceb', '#20303a'] },
+  { id: 'dark', label: 'Dark', colors: ['#151c24', '#304c63', '#69e6f7'] },
+  { id: 'terminal', label: 'Terminal', colors: ['#07120f', '#183d2e', '#8ef0b4'] },
+  { id: 'paper', label: 'Paper', colors: ['#f4f1e8', '#f1d7bb', '#3f3028'] },
+  { id: 'architecture', label: 'Architecture', colors: ['#e6edf0', '#cad9df', '#19313c'] },
+];
+---
+
+<aside class="panel panel--style" aria-labelledby="style-title">
+  <div class="panel-head">
+    <div>
+      <span class="panel-label">CONTROL SURFACE</span>
+      <h2 id="style-title">Style</h2>
+    </div>
+    <span class="panel-meta" data-current-preset>Light</span>
+  </div>
+
+  <div class="style-scroll">
+    <fieldset class="style-section">
+      <legend>{labels.preset}</legend>
+      <PresetList presets={presets} />
+    </fieldset>
+
+    <fieldset class="style-section">
+      <legend>{labels.colors}</legend>
+      <div class="color-grid">
+        <ColorField id="primary-color" label={labels.primaryColor} value="#d8eceb" variable="--diagram-primary" />
+        <ColorField id="border-color" label={labels.borderColor} value="#50727c" variable="--diagram-border" />
+        <ColorField id="text-color" label={labels.textColor} value="#20303a" variable="--diagram-text" />
+        <ColorField id="line-color" label={labels.lineColor} value="#50727c" variable="--diagram-line" />
+        <ColorField id="accent-color" label={labels.accentColor} value="#69e6f7" variable="--diagram-accent" />
+      </div>
+    </fieldset>
+
+    <fieldset class="style-section">
+      <legend>{labels.typography}</legend>
+      <label class="select-field" for="font-family">
+        <span>{labels.fontFamily}</span>
+        <select id="font-family" data-font-select>
+          <option value="IBM Plex Sans, ui-sans-serif, sans-serif">IBM Plex Sans</option>
+          <option value="IBM Plex Mono, ui-monospace, monospace">IBM Plex Mono</option>
+          <option value="ui-sans-serif, system-ui, sans-serif">System Sans</option>
+          <option value="ui-monospace, SFMono-Regular, monospace">System Mono</option>
+        </select>
+      </label>
+      <label class="range-field" for="text-size">
+        <span>{labels.textSize}<output data-text-size>16px</output></span>
+        <input id="text-size" type="range" min="12" max="22" value="16" step="1" data-text-size-input />
+      </label>
+    </fieldset>
+
+    <fieldset class="style-section">
+      <legend>{labels.background}</legend>
+      <label class="toggle-field" for="transparent-background">
+        <span>{labels.transparent}</span>
+        <input id="transparent-background" type="checkbox" data-transparent-toggle />
+        <span class="toggle-track" aria-hidden="true"><span></span></span>
+      </label>
+    </fieldset>
+
+    <button class="reset-button" type="button" data-reset-styles>
+      <Icon name="reset" />
+      <span>{labels.resetStyles}</span>
+    </button>
+  </div>
+</aside>

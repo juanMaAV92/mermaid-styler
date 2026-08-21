@@ -1,0 +1,27 @@
+---
+import Icon from './Icon.astro';
+
+interface Props {
+  label: string;
+  icon?: 'copy' | 'download' | 'reset' | 'spark' | 'arrow';
+  variant?: 'primary' | 'secondary' | 'quiet';
+  disabled?: boolean;
+  type?: 'button' | 'submit' | 'reset';
+  class?: string;
+}
+
+const {
+  label,
+  icon,
+  variant = 'secondary',
+  disabled = false,
+  type = 'button',
+  class: className,
+  ...attrs
+} = Astro.props;
+---
+
+<button class:list={['button', `button--${variant}`, className]} type={type} disabled={disabled} {...attrs}>
+  {icon && <Icon name={icon} />}
+  <span>{label}</span>
+</button>

@@ -1,0 +1,18 @@
+---
+interface Props {
+  id: string;
+  label: string;
+  value: string;
+  variable: string;
+}
+
+const { id, label, value, variable } = Astro.props;
+---
+
+<label class="color-field" for={id}>
+  <span class="color-field__name">{label}</span>
+  <span class="color-field__control">
+    <input id={id} type="color" value={value} data-color-variable={variable} />
+    <code data-color-value={id}>{value}</code>
+  </span>
+</label>

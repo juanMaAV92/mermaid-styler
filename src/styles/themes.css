@@ -1,0 +1,44 @@
+[data-preset="light"] {
+  --diagram-primary: #d8eceb;
+  --diagram-border: #50727c;
+  --diagram-text: #20303a;
+  --diagram-line: #50727c;
+  --diagram-accent: #69e6f7;
+  --diagram-surface: #f4f1e8;
+}
+
+[data-preset="dark"] {
+  --diagram-primary: #304c63;
+  --diagram-border: #69e6f7;
+  --diagram-text: #f4f1e8;
+  --diagram-line: #69e6f7;
+  --diagram-accent: #ff6b57;
+  --diagram-surface: #151c24;
+}
+
+[data-preset="terminal"] {
+  --diagram-primary: #183d2e;
+  --diagram-border: #8ef0b4;
+  --diagram-text: #d9ffe5;
+  --diagram-line: #8ef0b4;
+  --diagram-accent: #f2d479;
+  --diagram-surface: #07120f;
+}
+
+[data-preset="paper"] {
+  --diagram-primary: #f1d7bb;
+  --diagram-border: #a76b47;
+  --diagram-text: #3f3028;
+  --diagram-line: #a76b47;
+  --diagram-accent: #ff6b57;
+  --diagram-surface: #f4f1e8;
+}
+
+[data-preset="architecture"] {
+  --diagram-primary: #cad9df;
+  --diagram-border: #356575;
+  --diagram-text: #19313c;
+  --diagram-line: #356575;
+  --diagram-accent: #69e6f7;
+  --diagram-surface: #e6edf0;
+}

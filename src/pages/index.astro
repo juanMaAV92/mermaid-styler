@@ -1,0 +1,54 @@
+---
+import Button from '../components/ui/Button.astro';
+import Icon from '../components/ui/Icon.astro';
+import StatusBadge from '../components/ui/StatusBadge.astro';
+import ArtifactStage from '../components/mermaid/ArtifactStage.astro';
+import MermaidEditor from '../components/mermaid/MermaidEditor.astro';
+import StyleRail from '../components/mermaid/StyleRail.astro';
+import messages from '../i18n/messages.en';
+import '../styles/global.css';
+
+const sampleSource = `flowchart LR
+  A[AI-generated source] --> B{Style it}
+  B --> C[Shareable artifact]`;
+---
+
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="description" content="Turn Mermaid source into a shareable diagram." />
+    <title>{messages.brand}</title>
+  </head>
+  <body>
+    <!-- THESIS: turn Mermaid syntax into a shareable artifact; refuse generic dashboard chrome. OWN-WORLD: dark technical bench, paper stage, fine rules, cyan registration ink. STORY: paste, see, style, export. FIRST VIEWPORT: actions top, source left, artifact stage center, style rail right. FORM: proof bench, assigned direction 4, seed 32d896a2. FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md -->
+    <div class="app-shell" data-workbench data-preset="light">
+      <header class="topbar">
+        <a class="brand" href="/" aria-label={messages.brand}>
+          <span class="brand-mark" aria-hidden="true"><Icon name="spark" size={18} /></span>
+          <span class="brand-name">{messages.brand}</span>
+        </a>
+        <div class="topbar-status">
+          <StatusBadge label={messages.localRendering} tone="active" />
+          <StatusBadge label={messages.scaffoldReady} />
+        </div>
+        <div class="topbar-actions">
+          <Button label={messages.copySvg} icon="copy" variant="secondary" disabled data-action="copy-svg" />
+          <Button label={messages.exportPng} icon="download" variant="primary" disabled data-action="export-png" />
+        </div>
+      </header>
+
+      <main class="workbench" aria-label="Mermaid Styler workbench">
+        <MermaidEditor source={sampleSource} sourceHint={messages.sourceHint} placeholder={messages.sourcePlaceholder} />
+        <ArtifactStage title={messages.exampleArtifact} hint={messages.exampleArtifactHint} />
+        <StyleRail labels={messages} />
+      </main>
+
+      <footer class="app-footer">
+        <span><span class="footer-rule" aria-hidden="true"></span>{messages.noDiagram}</span>
+        <span class="footer-meta">V0.1 / LOCAL-FIRST</span>
+      </footer>
+    </div>
+    <script src="../scripts/app.ts"></script>
+  </body>
+</html>

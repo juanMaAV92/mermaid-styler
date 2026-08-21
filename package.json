@@ -1,0 +1,19 @@
+{
+  "name": "mermaid-styler",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "astro": "7.2.4",
+    "mermaid": "11.17.0"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2"
+  }
+}
