@@ -3,18 +3,26 @@ interface Props {
   source: string;
   sourceHint: string;
   placeholder: string;
+  labels: {
+    inputLabel: string;
+    source: string;
+    sourceCount: string;
+    renderLater: string;
+    errorDetails: string;
+    errorFallback: string;
+  };
 }
 
-const { source, sourceHint, placeholder } = Astro.props;
+const { source, sourceHint, placeholder, labels } = Astro.props;
 ---
 
 <section class="panel panel--editor" aria-labelledby="source-title">
   <div class="panel-head">
     <div>
-      <span class="panel-label">INPUT</span>
-      <h2 id="source-title">Source</h2>
+      <span class="panel-label">{labels.inputLabel}</span>
+      <h2 id="source-title">{labels.source}</h2>
     </div>
-    <span class="panel-meta" data-source-count>0 chars</span>
+    <span class="panel-meta" data-source-count>0 {labels.sourceCount}</span>
   </div>
   <div class="editor-wrap">
     <textarea
@@ -25,12 +33,16 @@ const { source, sourceHint, placeholder } = Astro.props;
       autocomplete="off"
       autocapitalize="off"
       data-source-input
-      aria-describedby="source-hint"
+      aria-describedby="source-hint source-feedback"
       placeholder={placeholder}
     >{source}</textarea>
   </div>
+  <div class="source-feedback" data-source-feedback hidden role="alert">
+    <strong data-source-feedback-title>{labels.errorDetails}</strong>
+    <span data-source-feedback-body>{labels.errorFallback}</span>
+  </div>
   <div class="panel-foot">
     <span id="source-hint">{sourceHint}</span>
-    <span class="keyboard-hint"><kbd>⌘</kbd><kbd>↵</kbd> render later</span>
+    <span class="keyboard-hint"><kbd>⌘</kbd><kbd>↵</kbd> {labels.renderLater}</span>
   </div>
 </section>

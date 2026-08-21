@@ -21,7 +21,14 @@ const {
 } = Astro.props;
 ---
 
-<button class:list={['button', `button--${variant}`, className]} type={type} disabled={disabled} {...attrs}>
+<button
+  class:list={['button', `button--${variant}`, className]}
+  type={type}
+  disabled={disabled}
+  aria-label={label}
+  title={label}
+  {...attrs}
+>
   {icon && <Icon name={icon} />}
   <span>{label}</span>
 </button>

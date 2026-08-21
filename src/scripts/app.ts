@@ -1,3 +1,5 @@
+import messages from '../i18n/messages.en';
+
 type Preset = {
   primary: string;
   border: string;
@@ -5,6 +7,22 @@ type Preset = {
   line: string;
   accent: string;
   surface: string;
+};
+
+type RenderState = 'empty' | 'rendering' | 'ready' | 'error' | 'timeout';
+
+type RenderStateOptions = {
+  message?: string;
+  detail?: string;
+  hasArtifact?: boolean;
+};
+
+type RenderStateEvent = RenderStateOptions & { state: RenderState };
+
+type MermaidStylerWindow = Window & {
+  mermaidStylerUI?: {
+    setRenderState: (state: RenderState, options?: RenderStateOptions) => void;
+  };
 };
 
 const presets: Record<string, Preset> = {
@@ -15,19 +33,91 @@ const presets: Record<string, Preset> = {
   architecture: { primary: '#cad9df', border: '#356575', text: '#19313c', line: '#356575', accent: '#69e6f7', surface: '#e6edf0' },
 };
 
+const renderStates: RenderState[] = ['empty', 'rendering', 'ready', 'error', 'timeout'];
+const isRenderState = (value: unknown): value is RenderState => renderStates.includes(value as RenderState);
+
 const workbench = document.querySelector<HTMLElement>('[data-workbench]');
 
 if (workbench) {
   const sourceInput = workbench.querySelector<HTMLTextAreaElement>('[data-source-input]');
   const sourceCount = workbench.querySelector<HTMLElement>('[data-source-count]');
   const stage = workbench.querySelector<HTMLElement>('[data-artifact-stage]');
+  const stageStatus = workbench.querySelector<HTMLElement>('[data-stage-status]');
+  const stageCaption = workbench.querySelector<HTMLElement>('[data-stage-caption-text]');
+  const stageStateViews = [...workbench.querySelectorAll<HTMLElement>('[data-state-view]')];
+  const stageNotices = [...workbench.querySelectorAll<HTMLElement>('[data-state-notice]')];
   const currentPreset = workbench.querySelector<HTMLElement>('[data-current-preset]');
+  const presetList = workbench.querySelector<HTMLElement>('[role="listbox"]');
   const presetButtons = [...workbench.querySelectorAll<HTMLButtonElement>('[data-preset]')];
   const textSizeInput = workbench.querySelector<HTMLInputElement>('[data-text-size-input]');
   const textSizeOutput = workbench.querySelector<HTMLOutputElement>('[data-text-size]');
   const fontSelect = workbench.querySelector<HTMLSelectElement>('[data-font-select]');
   const transparentToggle = workbench.querySelector<HTMLInputElement>('[data-transparent-toggle]');
   const resetButton = workbench.querySelector<HTMLButtonElement>('[data-reset-styles]');
+  const sourceFeedback = workbench.querySelector<HTMLElement>('[data-source-feedback]');
+  const sourceFeedbackTitle = workbench.querySelector<HTMLElement>('[data-source-feedback-title]');
+  const sourceFeedbackBody = workbench.querySelector<HTMLElement>('[data-source-feedback-body]');
+  const stateBadge = workbench.querySelector<HTMLElement>('[data-state-badge]');
+  const liveStatus = workbench.querySelector<HTMLElement>('[data-live-status]');
+  const actionButtons = [...workbench.querySelectorAll<HTMLButtonElement>('[data-action]')];
+
+  const stateCopy: Record<RenderState, { label: string; caption: string }> = {
+    empty: { label: messages.stateEmpty, caption: messages.emptyState },
+    rendering: { label: messages.stateRendering, caption: messages.renderingState },
+    ready: { label: messages.stateReady, caption: messages.readyState },
+    error: { label: messages.stateInvalid, caption: messages.invalidStateHint },
+    timeout: { label: messages.stateTimeout, caption: messages.timeoutStateHint },
+  };
+
+  const syncPresetTabStops = (selectedId?: string) => {
+    const activeId = selectedId
+      ?? presetButtons.find((button) => button.getAttribute('aria-selected') === 'true')?.dataset.preset
+      ?? presetButtons[0]?.dataset.preset;
+    presetButtons.forEach((button) => {
+      button.tabIndex = button.dataset.preset === activeId ? 0 : -1;
+    });
+  };
+
+  const applyRenderState = (state: RenderState, options: RenderStateOptions = {}) => {
+    if (options.hasArtifact !== undefined) {
+      workbench.dataset.hasArtifact = String(options.hasArtifact);
+    }
+
+    const hasArtifact = workbench.dataset.hasArtifact === 'true';
+    const isError = state === 'error' || state === 'timeout';
+    const baseState = isError ? (hasArtifact ? 'ready' : 'empty') : state;
+    const copy = stateCopy[state];
+
+    workbench.dataset.renderState = state;
+    if (stage) stage.dataset.renderState = state;
+    stageStateViews.forEach((view) => {
+      view.hidden = view.dataset.stateView !== baseState;
+    });
+    stageNotices.forEach((notice) => {
+      notice.hidden = notice.dataset.stateNotice !== state || !isError;
+    });
+
+    if (stageStatus) stageStatus.textContent = copy.label;
+    if (stageCaption) stageCaption.textContent = options.message ?? copy.caption;
+    if (stateBadge) {
+      stateBadge.textContent = copy.label;
+      stateBadge.classList.toggle('status-badge--active', state === 'ready');
+      stateBadge.classList.toggle('status-badge--warning', isError);
+    }
+    if (liveStatus) {
+      liveStatus.textContent = `${messages.statusAnnounce}: ${copy.label}. ${options.message ?? copy.caption}`;
+    }
+
+    if (sourceFeedback) sourceFeedback.hidden = !isError;
+    if (sourceFeedbackTitle) sourceFeedbackTitle.textContent = copy.label;
+    if (sourceFeedbackBody) {
+      sourceFeedbackBody.textContent = options.detail ?? (state === 'timeout' ? messages.timeoutStateHint : messages.errorFallback);
+    }
+
+    actionButtons.forEach((button) => {
+      button.disabled = !hasArtifact || state !== 'ready';
+    });
+  };
 
   const applyPreset = (presetId: string) => {
     const preset = presets[presetId];
@@ -51,6 +141,7 @@ if (workbench) {
       button.classList.toggle('is-selected', selected);
       button.setAttribute('aria-selected', String(selected));
     });
+    syncPresetTabStops(presetId);
 
     workbench.querySelectorAll<HTMLInputElement>('[data-color-variable]').forEach((input) => {
       const value = variables[input.dataset.colorVariable ?? ''];
@@ -69,10 +160,31 @@ if (workbench) {
       button.classList.remove('is-selected');
       button.setAttribute('aria-selected', 'false');
     });
+    syncPresetTabStops();
   };
 
   presetButtons.forEach((button) => {
     button.addEventListener('click', () => applyPreset(button.dataset.preset ?? 'light'));
+  });
+
+  presetList?.addEventListener('keydown', (event) => {
+    if (!(event instanceof KeyboardEvent)) return;
+    const currentIndex = presetButtons.indexOf(document.activeElement as HTMLButtonElement);
+    if (currentIndex < 0) return;
+
+    const nextIndex = {
+      ArrowDown: Math.min(currentIndex + 1, presetButtons.length - 1),
+      ArrowRight: Math.min(currentIndex + 1, presetButtons.length - 1),
+      ArrowUp: Math.max(currentIndex - 1, 0),
+      ArrowLeft: Math.max(currentIndex - 1, 0),
+      Home: 0,
+      End: presetButtons.length - 1,
+    }[event.key as 'ArrowDown' | 'ArrowRight' | 'ArrowUp' | 'ArrowLeft' | 'Home' | 'End'];
+
+    if (nextIndex === undefined) return;
+    event.preventDefault();
+    presetButtons[nextIndex].focus();
+    presetButtons[nextIndex].click();
   });
 
   workbench.querySelectorAll<HTMLInputElement>('[data-color-variable]').forEach((input) => {
@@ -115,9 +227,28 @@ if (workbench) {
   });
 
   const updateSourceCount = () => {
-    if (sourceCount && sourceInput) sourceCount.textContent = `${sourceInput.value.length} chars`;
+    if (sourceCount && sourceInput) sourceCount.textContent = `${sourceInput.value.length} ${messages.sourceCount}`;
   };
 
-  sourceInput?.addEventListener('input', updateSourceCount);
+  sourceInput?.addEventListener('input', () => {
+    updateSourceCount();
+    if (!sourceInput.value.trim()) applyRenderState('empty', { hasArtifact: false });
+  });
+
+  const uiApi = {
+    setRenderState: (state: RenderState, options: RenderStateOptions = {}) => applyRenderState(state, options),
+  };
+
+  (window as MermaidStylerWindow).mermaidStylerUI = uiApi;
+  window.addEventListener('mermaid-styler:render-state', (event) => {
+    const detail = (event as CustomEvent<RenderStateEvent>).detail;
+    if (!detail || !isRenderState(detail.state)) return;
+    applyRenderState(detail.state, detail);
+  });
+
+  syncPresetTabStops();
   updateSourceCount();
+  actionButtons.forEach((button) => {
+    button.disabled = true;
+  });
 }

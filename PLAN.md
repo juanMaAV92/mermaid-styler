@@ -1,6 +1,6 @@
 # Mermaid Styler — Implementation Plan
 
-Estado: listo para iniciar el scaffold, sin código de aplicación todavía.
+Estado: Fase 2 cerrada; Fase 3 lista para iniciar.
 
 ## Resultado buscado
 
@@ -30,6 +30,8 @@ Salida: decisiones registradas en `SPEC.md`, sin código de producto.
 
 ### Fase 1 — Scaffold Astro y sistema base
 
+Estado: completada.
+
 Backlog: `MS-001`, `MS-002`, `MS-033`, `MS-036`.
 
 Objetivo: shell mínimo, estático y consistente.
@@ -47,6 +49,10 @@ Trabajo:
 Validación: `dev` y `build` funcionan; no hay requests de fuentes remotas obligatorias.
 
 ### Fase 2 — Shell visual y estados de interfaz
+
+Estado: completada. Los estados están implementados como una capa de UI
+preparada para que el motor de la Fase 3 los actualice sin acoplar Mermaid a
+los componentes visuales.
 
 Backlog: `MS-005`, `MS-016`, `MS-017`, `MS-018`, `MS-034`, `MS-035`.
 

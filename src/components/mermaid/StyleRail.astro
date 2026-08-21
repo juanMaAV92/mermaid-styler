@@ -5,7 +5,15 @@ import PresetList from './PresetList.astro';
 
 interface Props {
   labels: {
+    controlSurfaceLabel: string;
+    style: string;
     preset: string;
+    presetListLabel: string;
+    presetLight: string;
+    presetDark: string;
+    presetTerminal: string;
+    presetPaper: string;
+    presetArchitecture: string;
     colors: string;
     typography: string;
     background: string;
@@ -23,19 +31,19 @@ interface Props {
 
 const { labels } = Astro.props;
 const presets = [
-  { id: 'light', label: 'Light', colors: ['#f4f1e8', '#d8eceb', '#20303a'] },
-  { id: 'dark', label: 'Dark', colors: ['#151c24', '#304c63', '#69e6f7'] },
-  { id: 'terminal', label: 'Terminal', colors: ['#07120f', '#183d2e', '#8ef0b4'] },
-  { id: 'paper', label: 'Paper', colors: ['#f4f1e8', '#f1d7bb', '#3f3028'] },
-  { id: 'architecture', label: 'Architecture', colors: ['#e6edf0', '#cad9df', '#19313c'] },
+  { id: 'light', label: labels.presetLight, colors: ['#f4f1e8', '#d8eceb', '#20303a'] },
+  { id: 'dark', label: labels.presetDark, colors: ['#151c24', '#304c63', '#69e6f7'] },
+  { id: 'terminal', label: labels.presetTerminal, colors: ['#07120f', '#183d2e', '#8ef0b4'] },
+  { id: 'paper', label: labels.presetPaper, colors: ['#f4f1e8', '#f1d7bb', '#3f3028'] },
+  { id: 'architecture', label: labels.presetArchitecture, colors: ['#e6edf0', '#cad9df', '#19313c'] },
 ];
 ---
 
 <aside class="panel panel--style" aria-labelledby="style-title">
   <div class="panel-head">
     <div>
-      <span class="panel-label">CONTROL SURFACE</span>
-      <h2 id="style-title">Style</h2>
+      <span class="panel-label">{labels.controlSurfaceLabel}</span>
+      <h2 id="style-title">{labels.style}</h2>
     </div>
     <span class="panel-meta" data-current-preset>Light</span>
   </div>
@@ -43,7 +51,7 @@ const presets = [
   <div class="style-scroll">
     <fieldset class="style-section">
       <legend>{labels.preset}</legend>
-      <PresetList presets={presets} />
+      <PresetList presets={presets} ariaLabel={labels.presetListLabel} />
     </fieldset>
 
     <fieldset class="style-section">

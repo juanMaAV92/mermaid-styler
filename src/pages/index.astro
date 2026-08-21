@@ -30,23 +30,29 @@ const sampleSource = `flowchart LR
         </a>
         <div class="topbar-status">
           <StatusBadge label={messages.localRendering} tone="active" />
-          <StatusBadge label={messages.scaffoldReady} />
+          <StatusBadge label={messages.scaffoldReady} state />
         </div>
+        <span class="sr-only" data-live-status role="status" aria-live="polite">{messages.statusAnnounce}: {messages.scaffoldReady}</span>
         <div class="topbar-actions">
           <Button label={messages.copySvg} icon="copy" variant="secondary" disabled data-action="copy-svg" />
           <Button label={messages.exportPng} icon="download" variant="primary" disabled data-action="export-png" />
         </div>
       </header>
 
-      <main class="workbench" aria-label="Mermaid Styler workbench">
-        <MermaidEditor source={sampleSource} sourceHint={messages.sourceHint} placeholder={messages.sourcePlaceholder} />
-        <ArtifactStage title={messages.exampleArtifact} hint={messages.exampleArtifactHint} />
+      <main class="workbench" aria-label={messages.workbenchLabel}>
+        <MermaidEditor
+          source={sampleSource}
+          sourceHint={messages.sourceHint}
+          placeholder={messages.sourcePlaceholder}
+          labels={messages}
+        />
+        <ArtifactStage title={messages.exampleArtifact} hint={messages.exampleArtifactHint} labels={messages} />
         <StyleRail labels={messages} />
       </main>
 
       <footer class="app-footer">
         <span><span class="footer-rule" aria-hidden="true"></span>{messages.noDiagram}</span>
-        <span class="footer-meta">V0.1 / LOCAL-FIRST</span>
+        <span class="footer-meta">{messages.footerMeta}</span>
       </footer>
     </div>
     <script src="../scripts/app.ts"></script>

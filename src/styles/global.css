@@ -5,6 +5,18 @@
   box-sizing: border-box;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 :root {
   color-scheme: dark;
   font-family: var(--font-ui);
@@ -138,6 +150,15 @@ input:focus-visible {
 .status-badge--active .status-badge__dot {
   background: var(--signal-cyan);
   box-shadow: 0 0 0 3px rgba(105, 230, 247, 0.08);
+}
+
+.status-badge--warning {
+  color: var(--ember);
+  border-color: rgba(255, 107, 87, 0.35);
+}
+
+.status-badge--warning .status-badge__dot {
+  background: var(--ember);
 }
 
 .topbar-actions {
@@ -298,6 +319,28 @@ input:focus-visible {
   background: var(--signal-cyan);
 }
 
+.source-feedback {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-5);
+  border-top: var(--border-thin) solid rgba(255, 107, 87, 0.35);
+  color: var(--ember);
+  background: rgba(255, 107, 87, 0.08);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.source-feedback[hidden] {
+  display: none;
+}
+
+.source-feedback strong {
+  font-family: var(--font-code);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
 .panel-foot {
   justify-content: space-between;
   gap: var(--space-3);
@@ -345,6 +388,7 @@ kbd {
 }
 
 .stage-surface {
+  position: relative;
   display: grid;
   place-items: center;
   width: 100%;
@@ -353,6 +397,101 @@ kbd {
   padding: var(--space-6);
   border: var(--border-thin) solid rgba(11, 15, 20, 0.12);
   background: rgba(244, 241, 232, 0.6);
+}
+
+.stage-state {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  max-width: 32ch;
+  color: var(--diagram-text);
+  text-align: center;
+}
+
+.stage-state[hidden],
+.stage-notice[hidden] {
+  display: none;
+}
+
+.stage-state strong,
+.stage-notice strong {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.stage-state span,
+.stage-notice span {
+  color: var(--diagram-border);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.stage-state--empty {
+  min-height: 120px;
+  align-content: center;
+}
+
+.stage-state__mark {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: var(--border-thin) solid var(--diagram-border);
+  border-radius: 50%;
+  color: var(--diagram-border);
+  font-family: var(--font-code);
+  font-size: 20px;
+  font-weight: 400;
+}
+
+.stage-state--rendering {
+  min-height: 120px;
+  align-content: center;
+}
+
+.stage-loader {
+  width: 28px;
+  height: 28px;
+  border: 2px solid color-mix(in srgb, var(--diagram-border) 25%, transparent);
+  border-top-color: var(--diagram-accent);
+  border-radius: 50%;
+  animation: stage-spin 800ms linear infinite;
+}
+
+.stage-notice {
+  position: absolute;
+  inset: var(--space-4) var(--space-4) auto;
+  z-index: 1;
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-thin) solid rgba(255, 107, 87, 0.42);
+  color: var(--ember);
+  background: rgba(244, 241, 232, 0.94);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.stage-notice--timeout {
+  border-color: rgba(105, 114, 124, 0.48);
+  color: var(--diagram-border);
+}
+
+.stage-alternative {
+  position: absolute;
+  inset: auto var(--space-4) var(--space-3);
+  margin: 0;
+  color: var(--diagram-border);
+  font-family: var(--font-code);
+  font-size: 9px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+@keyframes stage-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .artifact-stage.is-transparent .stage-surface {
@@ -621,6 +760,10 @@ kbd {
   background: var(--signal-cyan);
 }
 
+.toggle-field input:focus-visible + .toggle-track {
+  box-shadow: var(--focus-ring);
+}
+
 .reset-button {
   gap: var(--space-2);
   padding: 0;
@@ -716,6 +859,7 @@ kbd {
 
   .source-input {
     min-height: 300px;
+    font-size: 16px;
   }
 
   .panel--artifact {
@@ -754,6 +898,25 @@ kbd {
   }
 }
 
+@media (forced-colors: active) {
+  .button,
+  .panel,
+  .source-input,
+  .preset-option,
+  .select-field select,
+  .color-field input[type='color'],
+  .toggle-track,
+  .stage-notice {
+    border-color: CanvasText;
+  }
+
+  .status-badge__dot,
+  .caption-mark,
+  .footer-rule {
+    background: CanvasText;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -761,5 +924,9 @@ kbd {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
+  }
+
+  .stage-loader {
+    animation: none;
   }
 }

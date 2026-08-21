@@ -1,6 +1,8 @@
 # Mermaid Styler — Backlog
 
-Estado inicial: `Planned`. Las prioridades describen el orden recomendado para el MVP, no una promesa de fechas.
+Estado: Fases 0–2 completadas. Las prioridades describen el orden recomendado
+para el MVP, no una promesa de fechas. El siguiente corte es la Fase 3:
+motor Mermaid y coordinador de renders.
 
 ## P0 — Camino principal del MVP
 

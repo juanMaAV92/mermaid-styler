@@ -7,18 +7,20 @@ interface Preset {
 
 interface Props {
   presets: Preset[];
+  ariaLabel: string;
 }
 
-const { presets } = Astro.props;
+const { presets, ariaLabel } = Astro.props;
 ---
 
-<div class="preset-list" role="listbox" aria-label="Diagram presets">
+<div class="preset-list" role="listbox" aria-label={ariaLabel}>
   {presets.map((preset, index) => (
     <button
       class:list={['preset-option', index === 0 && 'is-selected']}
       type="button"
       role="option"
       aria-selected={index === 0}
+      tabindex={index === 0 ? 0 : -1}
       data-preset={preset.id}
     >
       <span class="preset-swatches" aria-hidden="true">

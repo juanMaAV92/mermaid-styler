@@ -2,12 +2,14 @@
 interface Props {
   label: string;
   tone?: 'neutral' | 'active' | 'warning';
+  class?: string;
+  state?: boolean;
 }
 
-const { label, tone = 'neutral' } = Astro.props;
+const { label, tone = 'neutral', class: className, state = false, ...attrs } = Astro.props;
 ---
 
-<span class:list={['status-badge', `status-badge--${tone}`]} aria-live="polite">
+<span class:list={['status-badge', `status-badge--${tone}`, className]} data-state-badge={state ? '' : undefined} {...attrs}>
   <span class="status-badge__dot" aria-hidden="true"></span>
   {label}
 </span>
