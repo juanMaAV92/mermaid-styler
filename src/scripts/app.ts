@@ -1,15 +1,6 @@
 import messages from '../i18n/messages.en';
-
-type Preset = {
-  primary: string;
-  border: string;
-  text: string;
-  line: string;
-  accent: string;
-  surface: string;
-};
-
-type RenderState = 'empty' | 'rendering' | 'ready' | 'error' | 'timeout';
+import { getPreset } from '../lib/theme/presets';
+import { isRenderState, type RenderState } from '../lib/ui/render-state';
 
 type RenderStateOptions = {
   message?: string;
@@ -24,17 +15,6 @@ type MermaidStylerWindow = Window & {
     setRenderState: (state: RenderState, options?: RenderStateOptions) => void;
   };
 };
-
-const presets: Record<string, Preset> = {
-  light: { primary: '#d8eceb', border: '#50727c', text: '#20303a', line: '#50727c', accent: '#69e6f7', surface: '#f4f1e8' },
-  dark: { primary: '#304c63', border: '#69e6f7', text: '#f4f1e8', line: '#69e6f7', accent: '#ff6b57', surface: '#151c24' },
-  terminal: { primary: '#183d2e', border: '#8ef0b4', text: '#d9ffe5', line: '#8ef0b4', accent: '#f2d479', surface: '#07120f' },
-  paper: { primary: '#f1d7bb', border: '#a76b47', text: '#3f3028', line: '#a76b47', accent: '#ff6b57', surface: '#f4f1e8' },
-  architecture: { primary: '#cad9df', border: '#356575', text: '#19313c', line: '#356575', accent: '#69e6f7', surface: '#e6edf0' },
-};
-
-const renderStates: RenderState[] = ['empty', 'rendering', 'ready', 'error', 'timeout'];
-const isRenderState = (value: unknown): value is RenderState => renderStates.includes(value as RenderState);
 
 const workbench = document.querySelector<HTMLElement>('[data-workbench]');
 
@@ -120,7 +100,7 @@ if (workbench) {
   };
 
   const applyPreset = (presetId: string) => {
-    const preset = presets[presetId];
+    const preset = getPreset(presetId);
     if (!preset) return;
 
     workbench.dataset.preset = presetId;

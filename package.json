@@ -7,13 +7,19 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "npm run test:unit && npm run test:e2e",
+    "test:unit": "vitest run",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "astro": "7.2.4",
     "mermaid": "11.17.0"
   },
   "devDependencies": {
-    "typescript": "7.0.2"
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^26.2.0",
+    "typescript": "7.0.2",
+    "vitest": "^4.1.11"
   }
 }
