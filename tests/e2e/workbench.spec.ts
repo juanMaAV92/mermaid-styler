@@ -9,6 +9,13 @@ test.describe('Mermaid Styler workbench', () => {
     await expect(page.getByRole('listbox', { name: 'Diagram presets' }).getByRole('option')).toHaveCount(5);
     await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', 'ready', { timeout: 10_000 });
     await expect(page.locator('[data-svg-host] svg')).toBeVisible();
+    await expect.poll(async () => (
+      await page.locator('[data-svg-host] svg').evaluate((svg) => {
+        const label = svg.querySelector<HTMLElement>('.nodeLabel');
+        const box = label?.closest('foreignObject')?.getBoundingClientRect();
+        return Boolean(box && box.width > 0 && box.height > 0);
+      })
+    )).toBe(true);
     await expect(page.getByRole('button', { name: 'Copy SVG' })).toBeDisabled();
     await expect(page.getByRole('button', { name: 'Export PNG' })).toBeDisabled();
   });
@@ -42,6 +49,37 @@ test.describe('Mermaid Styler workbench', () => {
     await expect.poll(async () => (
       (await svgHost.locator('svg').evaluate((svg) => svg.outerHTML)).toLowerCase().includes('#ffcc00')
     )).toBe(true);
+  });
+
+  test('zooms and pans the preview without rerendering the SVG', async ({ page }) => {
+    await page.goto('/');
+    const viewport = page.locator('[data-preview-viewport]');
+    const layer = page.locator('[data-preview-layer]');
+    const zoom = page.locator('[data-preview-zoom]');
+
+    await expect(zoom).toHaveText('100%');
+    const initialSvg = await page.locator('[data-svg-host] svg').evaluate((svg) => svg.id);
+
+    await page.getByRole('button', { name: 'Zoom in' }).click();
+    await expect(zoom).toHaveText('125%');
+    expect(await page.locator('[data-svg-host] svg').evaluate((svg) => svg.id)).toBe(initialSvg);
+
+    const box = await viewport.boundingBox();
+    if (!box) throw new Error('Preview viewport has no bounding box.');
+    const centerX = box.x + box.width / 2;
+    const centerY = box.y + box.height / 2;
+    await page.mouse.move(centerX, centerY);
+    await page.mouse.down();
+    await page.mouse.move(centerX + 48, centerY + 24);
+    await page.mouse.up();
+
+    await expect.poll(() => layer.evaluate((element) => getComputedStyle(element).getPropertyValue('--preview-pan-x').trim())).toBe('48px');
+    await expect.poll(() => layer.evaluate((element) => getComputedStyle(element).getPropertyValue('--preview-pan-y').trim())).toBe('24px');
+
+    await viewport.focus();
+    await viewport.press('0');
+    await expect(zoom).toHaveText('100%');
+    await expect(layer).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 0)');
   });
 
   test('supports preset selection with keyboard navigation', async ({ page }) => {

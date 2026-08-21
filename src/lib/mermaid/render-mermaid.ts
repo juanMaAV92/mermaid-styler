@@ -23,9 +23,17 @@ const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number): Promise<T
 
 const temporaryContainer = (): HTMLDivElement => {
   const container = document.createElement('div');
-  container.hidden = true;
   container.setAttribute('aria-hidden', 'true');
   container.dataset.mermaidTemporary = 'true';
+  // Mermaid measures foreignObject labels during render. `display: none` makes
+  // those measurements zero, so keep the node laid out but outside the viewport.
+  Object.assign(container.style, {
+    position: 'absolute',
+    left: '-100000px',
+    top: '0',
+    visibility: 'hidden',
+    pointerEvents: 'none',
+  });
   document.body.appendChild(container);
   return container;
 };

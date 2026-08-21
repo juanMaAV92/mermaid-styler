@@ -27,6 +27,10 @@ if (workbench) {
   const stage = workbench.querySelector<HTMLElement>('[data-artifact-stage]');
   const scaffoldPreview = workbench.querySelector<HTMLElement>('[data-scaffold-preview]');
   const svgHost = workbench.querySelector<HTMLElement>('[data-svg-host]');
+  const previewViewport = workbench.querySelector<HTMLElement>('[data-preview-viewport]');
+  const previewLayer = workbench.querySelector<HTMLElement>('[data-preview-layer]');
+  const previewZoom = workbench.querySelector<HTMLOutputElement>('[data-preview-zoom]');
+  const previewActions = [...workbench.querySelectorAll<HTMLButtonElement>('[data-preview-action]')];
   const stageStatus = workbench.querySelector<HTMLElement>('[data-stage-status]');
   const stageCaption = workbench.querySelector<HTMLElement>('[data-stage-caption-text]');
   const stageStateViews = [...workbench.querySelectorAll<HTMLElement>('[data-state-view]')];
@@ -60,6 +64,111 @@ if (workbench) {
     error: { label: messages.stateInvalid, caption: messages.invalidStateHint },
     timeout: { label: messages.stateTimeout, caption: messages.timeoutStateHint },
   };
+
+  const PREVIEW_ZOOM_MIN = 0.5;
+  const PREVIEW_ZOOM_MAX = 4;
+  const PREVIEW_ZOOM_STEP = 0.25;
+  const PREVIEW_PAN_LIMIT = 1200;
+  let previewScale = 1;
+  let previewPanX = 0;
+  let previewPanY = 0;
+  let activePointer: { id: number; startX: number; startY: number; panX: number; panY: number } | undefined;
+
+  const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+
+  const applyPreviewTransform = () => {
+    if (!previewLayer) return;
+    previewLayer.style.setProperty('--preview-scale', String(previewScale));
+    previewLayer.style.setProperty('--preview-pan-x', `${previewPanX}px`);
+    previewLayer.style.setProperty('--preview-pan-y', `${previewPanY}px`);
+    if (previewZoom) previewZoom.value = `${Math.round(previewScale * 100)}%`;
+  };
+
+  const fitPreview = () => {
+    previewScale = 1;
+    previewPanX = 0;
+    previewPanY = 0;
+    applyPreviewTransform();
+  };
+
+  const setPreviewZoom = (nextScale: number) => {
+    previewScale = clamp(nextScale, PREVIEW_ZOOM_MIN, PREVIEW_ZOOM_MAX);
+    applyPreviewTransform();
+  };
+
+  const panPreview = (x: number, y: number) => {
+    previewPanX = clamp(x, -PREVIEW_PAN_LIMIT, PREVIEW_PAN_LIMIT);
+    previewPanY = clamp(y, -PREVIEW_PAN_LIMIT, PREVIEW_PAN_LIMIT);
+    applyPreviewTransform();
+  };
+
+  const endPreviewPointer = () => {
+    activePointer = undefined;
+    previewViewport?.classList.remove('is-dragging');
+    previewLayer?.classList.remove('is-dragging');
+  };
+
+  previewViewport?.addEventListener('pointerdown', (event) => {
+    if (event.button !== 0) return;
+    activePointer = {
+      id: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      panX: previewPanX,
+      panY: previewPanY,
+    };
+    previewViewport.setPointerCapture(event.pointerId);
+    previewViewport.classList.add('is-dragging');
+    previewLayer?.classList.add('is-dragging');
+  });
+
+  previewViewport?.addEventListener('pointermove', (event) => {
+    if (!activePointer || activePointer.id !== event.pointerId) return;
+    event.preventDefault();
+    panPreview(
+      activePointer.panX + event.clientX - activePointer.startX,
+      activePointer.panY + event.clientY - activePointer.startY,
+    );
+  });
+
+  previewViewport?.addEventListener('pointerup', endPreviewPointer);
+  previewViewport?.addEventListener('pointercancel', endPreviewPointer);
+  previewViewport?.addEventListener('lostpointercapture', endPreviewPointer);
+  previewViewport?.addEventListener('wheel', (event) => {
+    event.preventDefault();
+    setPreviewZoom(previewScale + (event.deltaY < 0 ? PREVIEW_ZOOM_STEP : -PREVIEW_ZOOM_STEP));
+  }, { passive: false });
+
+  previewActions.forEach((button) => {
+    button.addEventListener('click', () => {
+      const action = button.dataset.previewAction;
+      if (action === 'zoom-in') setPreviewZoom(previewScale + PREVIEW_ZOOM_STEP);
+      if (action === 'zoom-out') setPreviewZoom(previewScale - PREVIEW_ZOOM_STEP);
+      if (action === 'fit') fitPreview();
+    });
+  });
+
+  previewViewport?.addEventListener('keydown', (event) => {
+    if (event.key === '+' || event.key === '=') {
+      event.preventDefault();
+      setPreviewZoom(previewScale + PREVIEW_ZOOM_STEP);
+    }
+    if (event.key === '-') {
+      event.preventDefault();
+      setPreviewZoom(previewScale - PREVIEW_ZOOM_STEP);
+    }
+    if (event.key === '0') {
+      event.preventDefault();
+      fitPreview();
+    }
+    const panStep = event.shiftKey ? 80 : 32;
+    if (event.key === 'ArrowLeft') panPreview(previewPanX - panStep, previewPanY);
+    if (event.key === 'ArrowRight') panPreview(previewPanX + panStep, previewPanY);
+    if (event.key === 'ArrowUp') panPreview(previewPanX, previewPanY - panStep);
+    if (event.key === 'ArrowDown') panPreview(previewPanX, previewPanY + panStep);
+  });
+
+  applyPreviewTransform();
 
   const syncPresetTabStops = (selectedId?: string) => {
     const activeId = selectedId
