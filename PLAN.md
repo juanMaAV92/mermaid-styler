@@ -1,6 +1,6 @@
 # Mermaid Styler — Implementation Plan
 
-Estado: Fase 2 cerrada; Fase 3 lista para iniciar.
+Estado: Fase 3 implementada; exportación, hardening y release pendientes.
 
 ## Resultado buscado
 
@@ -70,6 +70,9 @@ Trabajo:
 Validación: la interfaz se puede recorrer por teclado y no contiene valores visuales dispersos.
 
 ### Fase 3 — Motor Mermaid y coordinador de renders
+
+Estado: implementada para el preview local del MVP. La exportación y el
+hardening profundo quedan para las fases siguientes.
 
 Backlog: `MS-003`, `MS-004`, `MS-006`, `MS-037`, `MS-039`.
 

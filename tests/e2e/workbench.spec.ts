@@ -7,8 +7,41 @@ test.describe('Mermaid Styler workbench', () => {
     await expect(page).toHaveTitle('Mermaid Styler');
     await expect(page.getByRole('textbox', { name: 'Paste a Mermaid definition here…' })).toHaveValue(/flowchart LR/);
     await expect(page.getByRole('listbox', { name: 'Diagram presets' }).getByRole('option')).toHaveCount(5);
+    await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', 'ready', { timeout: 10_000 });
+    await expect(page.locator('[data-svg-host] svg')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Copy SVG' })).toBeDisabled();
     await expect(page.getByRole('button', { name: 'Export PNG' })).toBeDisabled();
+  });
+
+  test('preserves the last valid SVG when the next source is invalid', async ({ page }) => {
+    await page.goto('/');
+    const editor = page.getByRole('textbox', { name: 'Paste a Mermaid definition here…' });
+
+    await expect(page.locator('[data-svg-host] svg')).toBeVisible();
+    await editor.fill('flowchart LR\n  A -->');
+
+    await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', 'error', { timeout: 10_000 });
+    await expect(page.locator('[data-svg-host] svg')).toBeVisible();
+    await expect(page.locator('[data-state-notice="error"]')).toBeVisible();
+    await expect(page.locator('[data-source-feedback]')).toBeVisible();
+  });
+
+  test('updates the rendered SVG when a color control changes', async ({ page }) => {
+    await page.goto('/');
+    const svgHost = page.locator('[data-svg-host]');
+    const primaryColor = page.locator('#primary-color');
+
+    await expect(svgHost.locator('svg')).toBeVisible();
+    await primaryColor.evaluate((input) => {
+      const colorInput = input as HTMLInputElement;
+      colorInput.value = '#ffcc00';
+      colorInput.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+
+    await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', 'ready', { timeout: 10_000 });
+    await expect.poll(async () => (
+      (await svgHost.locator('svg').evaluate((svg) => svg.outerHTML)).toLowerCase().includes('#ffcc00')
+    )).toBe(true);
   });
 
   test('supports preset selection with keyboard navigation', async ({ page }) => {

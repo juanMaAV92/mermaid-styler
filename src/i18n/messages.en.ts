@@ -18,6 +18,7 @@ const messages = {
   emptyState: 'Paste Mermaid to start styling.',
   renderingState: 'Rendering Mermaid…',
   readyState: 'Preview ready.',
+  lastValidPreview: 'Preview from last valid source.',
   invalidState: 'Invalid Mermaid',
   invalidStateHint: 'Fix the source and render again.',
   timeoutState: 'Render timed out',

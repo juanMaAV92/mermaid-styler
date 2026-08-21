@@ -46,26 +46,29 @@ const { title, hint, labels } = Astro.props;
         <span>{labels.timeoutStateHint}</span>
       </div>
       <div class="stage-state stage-state--ready" data-state-view="ready">
-        <svg class="sample-diagram" viewBox="0 0 760 430" role="img" aria-labelledby="sample-title sample-description">
-          <title id="sample-title">Example artifact diagram</title>
-          <desc id="sample-description">A sample flow from source to renderer to shareable artifact.</desc>
-          <path class="diagram-line" d="M239 214h86m110 0h86" />
-          <path class="diagram-arrow" d="m314 205 12 9-12 9m110-18 12 9-12 9" />
-          <rect class="diagram-node" x="72" y="166" width="167" height="96" rx="8" />
-          <rect class="diagram-node diagram-node--accent" x="325" y="166" width="110" height="96" rx="8" />
-          <rect class="diagram-node" x="521" y="166" width="167" height="96" rx="8" />
-          <circle class="diagram-port" cx="239" cy="214" r="4" />
-          <circle class="diagram-port" cx="325" cy="214" r="4" />
-          <circle class="diagram-port" cx="435" cy="214" r="4" />
-          <circle class="diagram-port" cx="521" cy="214" r="4" />
-          <text class="diagram-label diagram-label--small" x="155.5" y="198" text-anchor="middle">SOURCE</text>
-          <text class="diagram-label" x="155.5" y="228" text-anchor="middle">Mermaid code</text>
-          <text class="diagram-label diagram-label--small" x="380" y="198" text-anchor="middle">STYLE</text>
-          <text class="diagram-label" x="380" y="228" text-anchor="middle">Theme</text>
-          <text class="diagram-label diagram-label--small" x="604.5" y="198" text-anchor="middle">OUTPUT</text>
-          <text class="diagram-label" x="604.5" y="228" text-anchor="middle">Shareable SVG</text>
-          <text class="diagram-note" x="380" y="334" text-anchor="middle">Proof bench preview</text>
-        </svg>
+        <div class="scaffold-preview" data-scaffold-preview>
+          <svg class="sample-diagram" viewBox="0 0 760 430" role="img" aria-labelledby="sample-title sample-description">
+            <title id="sample-title">Example artifact diagram</title>
+            <desc id="sample-description">A sample flow from source to renderer to shareable artifact.</desc>
+            <path class="diagram-line" d="M239 214h86m110 0h86" />
+            <path class="diagram-arrow" d="m314 205 12 9-12 9m110-18 12 9-12 9" />
+            <rect class="diagram-node" x="72" y="166" width="167" height="96" rx="8" />
+            <rect class="diagram-node diagram-node--accent" x="325" y="166" width="110" height="96" rx="8" />
+            <rect class="diagram-node" x="521" y="166" width="167" height="96" rx="8" />
+            <circle class="diagram-port" cx="239" cy="214" r="4" />
+            <circle class="diagram-port" cx="325" cy="214" r="4" />
+            <circle class="diagram-port" cx="435" cy="214" r="4" />
+            <circle class="diagram-port" cx="521" cy="214" r="4" />
+            <text class="diagram-label diagram-label--small" x="155.5" y="198" text-anchor="middle">SOURCE</text>
+            <text class="diagram-label" x="155.5" y="228" text-anchor="middle">Mermaid code</text>
+            <text class="diagram-label diagram-label--small" x="380" y="198" text-anchor="middle">STYLE</text>
+            <text class="diagram-label" x="380" y="228" text-anchor="middle">Theme</text>
+            <text class="diagram-label diagram-label--small" x="604.5" y="198" text-anchor="middle">OUTPUT</text>
+            <text class="diagram-label" x="604.5" y="228" text-anchor="middle">Shareable SVG</text>
+            <text class="diagram-note" x="380" y="334" text-anchor="middle">Proof bench preview</text>
+          </svg>
+        </div>
+        <div class="rendered-diagram" data-svg-host hidden aria-live="off"></div>
       </div>
       <div class="stage-caption" id="preview-status" aria-live="polite">
         <span class="caption-mark" aria-hidden="true"></span>

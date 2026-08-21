@@ -449,6 +449,26 @@ kbd {
   align-content: center;
 }
 
+.scaffold-preview,
+.rendered-diagram {
+  display: grid;
+  place-items: center;
+  width: 100%;
+}
+
+.scaffold-preview[hidden],
+.rendered-diagram[hidden] {
+  display: none;
+}
+
+.rendered-diagram > svg {
+  display: block;
+  width: min(100%, 760px);
+  height: auto;
+  max-height: 100%;
+  overflow: visible;
+}
+
 .stage-loader {
   width: 28px;
   height: 28px;

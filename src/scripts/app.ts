@@ -1,4 +1,7 @@
 import messages from '../i18n/messages.en';
+import { MermaidRenderError } from '../lib/mermaid/types';
+import type { MermaidRenderResult, MermaidThemeOptions, RenderMermaidOptions } from '../lib/mermaid/types';
+import { LatestWinsRenderCoordinator } from '../lib/mermaid/render-coordinator';
 import { getPreset } from '../lib/theme/presets';
 import { isRenderState, type RenderState } from '../lib/ui/render-state';
 
@@ -22,6 +25,8 @@ if (workbench) {
   const sourceInput = workbench.querySelector<HTMLTextAreaElement>('[data-source-input]');
   const sourceCount = workbench.querySelector<HTMLElement>('[data-source-count]');
   const stage = workbench.querySelector<HTMLElement>('[data-artifact-stage]');
+  const scaffoldPreview = workbench.querySelector<HTMLElement>('[data-scaffold-preview]');
+  const svgHost = workbench.querySelector<HTMLElement>('[data-svg-host]');
   const stageStatus = workbench.querySelector<HTMLElement>('[data-stage-status]');
   const stageCaption = workbench.querySelector<HTMLElement>('[data-stage-caption-text]');
   const stageStateViews = [...workbench.querySelectorAll<HTMLElement>('[data-state-view]')];
@@ -40,6 +45,13 @@ if (workbench) {
   const stateBadge = workbench.querySelector<HTMLElement>('[data-state-badge]');
   const liveStatus = workbench.querySelector<HTMLElement>('[data-live-status]');
   const actionButtons = [...workbench.querySelectorAll<HTMLButtonElement>('[data-action]')];
+  const renderCoordinator = new LatestWinsRenderCoordinator<RenderMermaidOptions, MermaidRenderResult>(async (source, options) => {
+    const { renderMermaid } = await import('../lib/mermaid/render-mermaid');
+    return renderMermaid(source, options);
+  });
+  let renderTimer: ReturnType<typeof setTimeout> | undefined;
+  let renderRequestToken = 0;
+  let requestRender = () => undefined;
 
   const stateCopy: Record<RenderState, { label: string; caption: string }> = {
     empty: { label: messages.stateEmpty, caption: messages.emptyState },
@@ -95,8 +107,83 @@ if (workbench) {
     }
 
     actionButtons.forEach((button) => {
-      button.disabled = !hasArtifact || state !== 'ready';
+      // Export and clipboard handlers arrive in Phase 5; keep the affordances honest until then.
+      button.disabled = true;
     });
+  };
+
+  const readThemeOptions = (): MermaidThemeOptions => {
+    const computed = getComputedStyle(workbench);
+    const read = (name: string, fallback: string) => computed.getPropertyValue(name).trim() || fallback;
+    const fontSize = Number.parseInt(read('--diagram-font-size', '16px'), 10);
+
+    return {
+      background: read('--diagram-surface', '#f4f1e8'),
+      primaryColor: read('--diagram-primary', '#d8eceb'),
+      primaryBorderColor: read('--diagram-border', '#50727c'),
+      primaryTextColor: read('--diagram-text', '#20303a'),
+      lineColor: read('--diagram-line', '#50727c'),
+      accentColor: read('--diagram-accent', '#69e6f7'),
+      fontFamily: read('--diagram-font', 'IBM Plex Sans, ui-sans-serif, sans-serif'),
+      fontSize: Number.isFinite(fontSize) ? fontSize : 16,
+      transparent: stage?.classList.contains('is-transparent') ?? false,
+    };
+  };
+
+  const clearRenderedArtifact = () => {
+    if (svgHost) {
+      svgHost.replaceChildren();
+      svgHost.hidden = true;
+    }
+    if (scaffoldPreview) scaffoldPreview.hidden = false;
+  };
+
+  const handleRenderError = (error: unknown) => {
+    const isTimeout = error instanceof MermaidRenderError && error.code === 'RENDER_TIMEOUT';
+    const hasArtifact = workbench.dataset.hasArtifact === 'true';
+    applyRenderState(isTimeout ? 'timeout' : 'error', {
+      hasArtifact,
+      message: hasArtifact ? messages.lastValidPreview : undefined,
+      detail: error instanceof MermaidRenderError ? error.message : messages.errorFallback,
+    });
+  };
+
+  requestRender = () => {
+    if (!sourceInput) return;
+    if (renderTimer) clearTimeout(renderTimer);
+
+    const source = sourceInput.value;
+    if (!source.trim()) {
+      renderRequestToken += 1;
+      clearRenderedArtifact();
+      applyRenderState('empty', { hasArtifact: false });
+      return;
+    }
+
+    const requestToken = renderRequestToken += 1;
+    const hasArtifact = workbench.dataset.hasArtifact === 'true';
+    applyRenderState('rendering', { hasArtifact });
+
+    renderTimer = setTimeout(async () => {
+      try {
+        const outcome = await renderCoordinator.enqueue(source, {
+          theme: readThemeOptions(),
+        });
+
+        if (outcome.status === 'superseded' || requestToken !== renderRequestToken) return;
+
+        if (svgHost) {
+          svgHost.replaceChildren();
+          svgHost.innerHTML = outcome.result.svg;
+          outcome.result.bindFunctions?.(svgHost);
+          svgHost.hidden = false;
+        }
+        if (scaffoldPreview) scaffoldPreview.hidden = true;
+        applyRenderState('ready', { hasArtifact: true });
+      } catch (error) {
+        if (requestToken === renderRequestToken) handleRenderError(error);
+      }
+    }, 300);
   };
 
   const applyPreset = (presetId: string) => {
@@ -144,7 +231,10 @@ if (workbench) {
   };
 
   presetButtons.forEach((button) => {
-    button.addEventListener('click', () => applyPreset(button.dataset.preset ?? 'light'));
+    button.addEventListener('click', () => {
+      applyPreset(button.dataset.preset ?? 'light');
+      requestRender();
+    });
   });
 
   presetList?.addEventListener('keydown', (event) => {
@@ -175,12 +265,14 @@ if (workbench) {
       const output = workbench.querySelector<HTMLElement>(`[data-color-value="${input.id}"]`);
       if (output) output.textContent = input.value;
       markCustom();
+      requestRender();
     });
   });
 
   fontSelect?.addEventListener('change', () => {
     workbench.style.setProperty('--diagram-font', fontSelect.value);
     markCustom();
+    requestRender();
   });
 
   textSizeInput?.addEventListener('input', () => {
@@ -188,11 +280,13 @@ if (workbench) {
     workbench.style.setProperty('--diagram-font-size', value);
     if (textSizeOutput) textSizeOutput.value = value;
     markCustom();
+    requestRender();
   });
 
   transparentToggle?.addEventListener('change', () => {
     stage?.classList.toggle('is-transparent', transparentToggle.checked);
     markCustom();
+    requestRender();
   });
 
   resetButton?.addEventListener('click', () => {
@@ -204,6 +298,7 @@ if (workbench) {
     workbench.style.setProperty('--diagram-font-size', '16px');
     if (transparentToggle) transparentToggle.checked = false;
     stage?.classList.remove('is-transparent');
+    requestRender();
   });
 
   const updateSourceCount = () => {
@@ -212,7 +307,7 @@ if (workbench) {
 
   sourceInput?.addEventListener('input', () => {
     updateSourceCount();
-    if (!sourceInput.value.trim()) applyRenderState('empty', { hasArtifact: false });
+    requestRender();
   });
 
   const uiApi = {
@@ -231,4 +326,5 @@ if (workbench) {
   actionButtons.forEach((button) => {
     button.disabled = true;
   });
+  requestRender();
 }
