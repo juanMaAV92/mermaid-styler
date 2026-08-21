@@ -35,6 +35,8 @@ const sampleSource = `flowchart LR
         <span class="sr-only" data-live-status role="status" aria-live="polite">{messages.statusAnnounce}: {messages.scaffoldReady}</span>
         <div class="topbar-actions">
           <Button label={messages.copySvg} icon="copy" variant="secondary" disabled data-action="copy-svg" />
+          <Button label={messages.exportSvg} icon="download" variant="secondary" disabled data-action="export-svg" />
+          <Button label={messages.copyPng} icon="copy" variant="secondary" disabled data-action="copy-png" />
           <Button label={messages.exportPng} icon="download" variant="primary" disabled data-action="export-png" />
         </div>
       </header>

@@ -32,10 +32,10 @@ externo.
 
 ## Estado del proyecto
 
-**WIP — scaffold inicial implementado.** La base visual Proof Bench, el sistema de
-tokens, el layout responsive y los controles de interfaz ya están preparados. La
-integración completa del motor Mermaid, la sanitización y la exportación forman
-parte de las siguientes fases del MVP.
+**WIP — flujo principal implementado.** El render Mermaid local, los estilos,
+zoom/pan, sanitización, exportación SVG/PNG y clipboard ya funcionan. Quedan el
+hardening de compatibilidad, la matriz por familia de diagrama y el despliegue
+final en Dokploy.
 
 ## Alcance del MVP
 

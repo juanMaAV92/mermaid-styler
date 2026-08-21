@@ -4,6 +4,9 @@ import type { MermaidRenderResult, MermaidThemeOptions, RenderMermaidOptions } f
 import { LatestWinsRenderCoordinator } from '../lib/mermaid/render-coordinator';
 import { getPreset } from '../lib/theme/presets';
 import { isRenderState, type RenderState } from '../lib/ui/render-state';
+import { copyPngToClipboard, copyTextToClipboard } from '../lib/export/clipboard';
+import { downloadBlob } from '../lib/export/download';
+import { svgToPngBlob } from '../lib/export/png';
 
 type RenderStateOptions = {
   message?: string;
@@ -82,6 +85,63 @@ if (workbench) {
     previewLayer.style.setProperty('--preview-pan-x', `${previewPanX}px`);
     previewLayer.style.setProperty('--preview-pan-y', `${previewPanY}px`);
     if (previewZoom) previewZoom.value = `${Math.round(previewScale * 100)}%`;
+  };
+
+  const getRenderedSvg = () => svgHost?.querySelector<SVGSVGElement>('svg');
+
+  const getRenderedSvgMarkup = () => {
+    const svg = getRenderedSvg();
+    if (!svg) throw new Error('No rendered SVG is available.');
+    return svg.outerHTML;
+  };
+
+  const createPngBlob = async () => {
+    const svg = getRenderedSvg();
+    if (!svg) throw new Error('No rendered SVG is available.');
+    const computed = getComputedStyle(workbench);
+    return svgToPngBlob(svg, {
+      fontFamily: computed.getPropertyValue('--diagram-font').trim() || 'sans-serif',
+      fontSize: computed.getPropertyValue('--diagram-font-size').trim() || '16px',
+      textColor: computed.getPropertyValue('--diagram-text').trim() || '#20303a',
+      background: computed.getPropertyValue('--diagram-surface').trim() || '#f4f1e8',
+      transparent: stage?.classList.contains('is-transparent') ?? false,
+    });
+  };
+
+  const announceArtifactAction = (message: string) => {
+    if (liveStatus) liveStatus.textContent = message;
+  };
+
+  const handleArtifactAction = async (action: string) => {
+    try {
+      if (action === 'export-svg') {
+        const blob = new Blob([getRenderedSvgMarkup()], { type: 'image/svg+xml;charset=utf-8' });
+        downloadBlob(blob, 'mermaid-diagram.svg');
+        announceArtifactAction(messages.svgExported);
+      }
+
+      if (action === 'copy-svg') {
+        await copyTextToClipboard(getRenderedSvgMarkup());
+        announceArtifactAction(messages.svgCopied);
+      }
+
+      if (action === 'export-png') {
+        downloadBlob(await createPngBlob(), 'mermaid-diagram.png');
+        announceArtifactAction(messages.pngExported);
+      }
+
+      if (action === 'copy-png') {
+        const blob = await createPngBlob();
+        if (await copyPngToClipboard(blob)) {
+          announceArtifactAction(messages.pngCopied);
+        } else {
+          downloadBlob(blob, 'mermaid-diagram.png');
+          announceArtifactAction(messages.pngClipboardFallback);
+        }
+      }
+    } catch {
+      announceArtifactAction(messages.artifactActionError);
+    }
   };
 
   const fitPreview = () => {
@@ -215,10 +275,8 @@ if (workbench) {
       sourceFeedbackBody.textContent = options.detail ?? (state === 'timeout' ? messages.timeoutStateHint : messages.errorFallback);
     }
 
-    actionButtons.forEach((button) => {
-      // Export and clipboard handlers arrive in Phase 5; keep the affordances honest until then.
-      button.disabled = true;
-    });
+    const canUseArtifact = hasArtifact && state !== 'empty' && state !== 'rendering';
+    actionButtons.forEach((button) => { button.disabled = !canUseArtifact; });
   };
 
   const readThemeOptions = (): MermaidThemeOptions => {
@@ -433,6 +491,7 @@ if (workbench) {
   syncPresetTabStops();
   updateSourceCount();
   actionButtons.forEach((button) => {
+    button.addEventListener('click', () => void handleArtifactAction(button.dataset.action ?? ''));
     button.disabled = true;
   });
   requestRender();

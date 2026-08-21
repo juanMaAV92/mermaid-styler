@@ -1,8 +1,8 @@
 # Mermaid Styler — Backlog
 
-Estado: Fase 3 implementada. Las prioridades describen el orden recomendado
-para el MVP, no una promesa de fechas. El siguiente corte es la Fase 4:
-temas, presets y compatibilidad Mermaid.
+Estado: render, navegación y exportación base implementados. Las prioridades
+describen el orden recomendado para el MVP, no una promesa de fechas. El
+siguiente corte es compatibilidad, hardening y release.
 
 ## P0 — Camino principal del MVP
 

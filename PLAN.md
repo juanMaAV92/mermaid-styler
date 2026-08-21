@@ -1,6 +1,6 @@
 # Mermaid Styler — Implementation Plan
 
-Estado: Fase 3 implementada; exportación, hardening y release pendientes.
+Estado: flujo principal y exportación implementados; hardening, compatibilidad y release pendientes.
 
 ## Resultado buscado
 
@@ -71,8 +71,7 @@ Validación: la interfaz se puede recorrer por teclado y no contiene valores vis
 
 ### Fase 3 — Motor Mermaid y coordinador de renders
 
-Estado: implementada para el preview local del MVP. La exportación y el
-hardening profundo quedan para las fases siguientes.
+Estado: implementada para el preview local del MVP y su navegación interactiva.
 
 Backlog: `MS-003`, `MS-004`, `MS-006`, `MS-037`, `MS-039`.
 
@@ -92,6 +91,9 @@ Validación: paste → render funciona; un source inválido conserva el preview 
 
 ### Fase 4 — Temas, presets y compatibilidad Mermaid
 
+Estado: implementación base de tokens, presets y controles completada; la
+matriz de compatibilidad por familia de diagrama sigue pendiente.
+
 Backlog: `MS-007`, `MS-008`, `MS-009`, `MS-010`, `MS-019`, `MS-024`, `MS-043`.
 
 Objetivo: aplicar la identidad visual sin prometer capacidades que Mermaid no soporta.
@@ -108,6 +110,9 @@ Trabajo:
 Validación: cambiar un control actualiza el preview y la matriz registra las diferencias reales entre flowchart, sequence, class, state y ER.
 
 ### Fase 5 — Sanitización, exportación y clipboard
+
+Estado: implementación base completada para SVG, PNG y clipboard. Faltan las
+pruebas de compatibilidad y los casos extremos de hardening.
 
 Backlog: `MS-011`, `MS-012`, `MS-013`, `MS-014`, `MS-015`, `MS-045`, `MS-046`, `MS-049`.
 

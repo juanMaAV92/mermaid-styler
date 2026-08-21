@@ -16,8 +16,36 @@ test.describe('Mermaid Styler workbench', () => {
         return Boolean(box && box.width > 0 && box.height > 0);
       })
     )).toBe(true);
-    await expect(page.getByRole('button', { name: 'Copy SVG' })).toBeDisabled();
-    await expect(page.getByRole('button', { name: 'Export PNG' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Copy SVG' })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Export SVG' })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Copy PNG' })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Export PNG' })).toBeEnabled();
+  });
+
+  test('downloads SVG and PNG artifacts from the rendered preview', async ({ page }) => {
+    await page.goto('/');
+
+    const svgDownload = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Export SVG' }).click();
+    await expect((await svgDownload).suggestedFilename()).toBe('mermaid-diagram.svg');
+
+    const pngDownload = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Export PNG' }).click();
+    await expect((await pngDownload).suggestedFilename()).toBe('mermaid-diagram.png');
+  });
+
+  test('copies SVG text and PNG image when clipboard permissions are available', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: 'http://127.0.0.1:4321' });
+    await page.goto('/');
+
+    await page.getByRole('button', { name: 'Copy SVG' }).click();
+    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toContain('<svg');
+
+    await page.getByRole('button', { name: 'Copy PNG' }).click();
+    await expect.poll(async () => page.evaluate(async () => {
+      const items = await navigator.clipboard.read();
+      return items.some((item) => item.types.includes('image/png'));
+    })).toBe(true);
   });
 
   test('preserves the last valid SVG when the next source is invalid', async ({ page }) => {
