@@ -133,6 +133,9 @@ Validación: SVG y PNG no tienen recortes, conservan estilos y no contienen cont
 
 ### Fase 6 — Hardening, privacidad, licencias y rendimiento
 
+Estado: baseline automatizado completado. La validación en Safari/iOS,
+Android y dispositivos físicos sigue pendiente.
+
 Backlog: `MS-020`, `MS-021`, `MS-022`, `MS-040`, `MS-041`, `MS-042`, `MS-044`, `MS-047`, `MS-048`, `MS-050`, `MS-051`.
 
 Objetivo: comprobar que el MVP es resistente y publicable.

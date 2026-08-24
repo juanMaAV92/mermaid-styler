@@ -46,6 +46,8 @@ const messages = {
   pngCopied: 'PNG copied.',
   pngClipboardFallback: 'PNG clipboard is not supported; PNG downloaded instead.',
   artifactActionError: 'The artifact could not be prepared. Try rendering again.',
+  exportTitle: 'Mermaid diagram',
+  exportDescription: 'Rendered Mermaid diagram. The original Mermaid source is included as a text alternative in the metadata.',
   preset: 'Preset',
   presetListLabel: 'Diagram presets',
   presetLight: 'Light',

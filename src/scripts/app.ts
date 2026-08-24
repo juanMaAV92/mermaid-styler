@@ -7,6 +7,7 @@ import { isRenderState, type RenderState } from '../lib/ui/render-state';
 import { copyPngToClipboard, copyTextToClipboard } from '../lib/export/clipboard';
 import { downloadBlob } from '../lib/export/download';
 import { svgToPngBlob } from '../lib/export/png';
+import { addSvgMetadata } from '../lib/export/svg';
 
 type RenderStateOptions = {
   message?: string;
@@ -95,6 +96,12 @@ if (workbench) {
     return svg.outerHTML;
   };
 
+  const getExportSvgMarkup = () => addSvgMetadata(getRenderedSvgMarkup(), {
+    title: messages.exportTitle,
+    description: messages.exportDescription,
+    source: sourceInput?.value ?? '',
+  });
+
   const createPngBlob = async () => {
     const svg = getRenderedSvg();
     if (!svg) throw new Error('No rendered SVG is available.');
@@ -115,13 +122,13 @@ if (workbench) {
   const handleArtifactAction = async (action: string) => {
     try {
       if (action === 'export-svg') {
-        const blob = new Blob([getRenderedSvgMarkup()], { type: 'image/svg+xml;charset=utf-8' });
+        const blob = new Blob([getExportSvgMarkup()], { type: 'image/svg+xml;charset=utf-8' });
         downloadBlob(blob, 'mermaid-diagram.svg');
         announceArtifactAction(messages.svgExported);
       }
 
       if (action === 'copy-svg') {
-        await copyTextToClipboard(getRenderedSvgMarkup());
+        await copyTextToClipboard(getExportSvgMarkup());
         announceArtifactAction(messages.svgCopied);
       }
 

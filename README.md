@@ -112,6 +112,22 @@ npm run build     # build estático en dist/
 npm run preview   # sirve localmente el build generado
 ```
 
+## QA automatizado
+
+La suite cubre renderizado de flowchart, sequence, class, state y ER; PNG con
+Unicode, etiquetas largas y transparencia; clipboard; navegación del preview; y
+20 renders consecutivos con verificación de DOM, SVG y canvas temporales.
+
+```bash
+npm run typecheck
+npm run test
+npm run build
+```
+
+Firefox y WebKit se validan como smoke tests locales. La comprobación final en
+Safari/iOS, Android y dispositivos físicos queda como revisión manual antes del
+release público.
+
 ## Despliegue en Dokploy
 
 Mermaid Styler se publica como sitio estático. El build produce el directorio
