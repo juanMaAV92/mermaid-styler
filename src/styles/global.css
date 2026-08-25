@@ -925,7 +925,21 @@ kbd {
 }
 
 .footer-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
   color: #607080;
+}
+
+.portfolio-link {
+  color: var(--steel-light);
+  text-decoration: none;
+  transition: color var(--motion-fast) var(--ease-out);
+}
+
+.portfolio-link:hover,
+.portfolio-link:focus-visible {
+  color: var(--signal-cyan);
 }
 
 @media (max-width: 1180px) {
