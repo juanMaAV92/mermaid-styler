@@ -7,7 +7,7 @@
 Herramienta local-first para pegar Mermaid, visualizarlo, aplicar estilo y exportar
 un artefacto presentable para Jira, documentación, presentaciones o pull requests.
 
-<img alt="Status: WIP" src="https://img.shields.io/badge/status-WIP-orange.svg">
+<img alt="Status: MVP deployed" src="https://img.shields.io/badge/status-MVP%20deployed-2EA44F.svg">
 <img alt="Built with Astro" src="https://img.shields.io/badge/built%20with-Astro-BC52EE.svg">
 <img alt="Mermaid" src="https://img.shields.io/badge/renderer-Mermaid-FF3670.svg">
 <img alt="Static site" src="https://img.shields.io/badge/deployment-static-2EA44F.svg">
@@ -30,12 +30,16 @@ Todo el procesamiento de la primera versión ocurre en el navegador. No hay logi
 base de datos, historial, persistencia ni envío del código Mermaid a un servicio
 externo.
 
+## Demo pública
+
+[Abrir Mermaid Styler](https://mermaid-styler.duckdns.org/)
+
 ## Estado del proyecto
 
-**WIP — flujo principal implementado.** El render Mermaid local, los estilos,
-zoom/pan, sanitización, exportación SVG/PNG y clipboard ya funcionan. Quedan el
-hardening de compatibilidad, la matriz por familia de diagrama y el despliegue
-final en Dokploy.
+**MVP desplegado en producción.** El render Mermaid local, los estilos, zoom/pan,
+sanitización, exportación SVG/PNG, clipboard y navegación responsive están
+implementados y validados. La aplicación está publicada como sitio estático en
+Dokploy.
 
 ## Alcance del MVP
 
@@ -61,8 +65,8 @@ generación de Mermaid con IA están fuera del MVP.
 | Render | Mermaid 11, ejecutado en el navegador |
 | UI | HTML, CSS y scripts vanilla; sin React, Vue ni Svelte |
 | Estilos | Sistema de tokens CSS y componentes Astro reutilizables |
-| Build | Sitio estático con salida en `dist/` |
-| Deploy | Dokploy como destino inicial |
+| Build | Railpack · salida estática en `dist/` |
+| Deploy | Dokploy · HTTPS con Let’s Encrypt |
 
 ## Mapa del repo
 
@@ -88,7 +92,7 @@ mermaid-styler/
 
 ### Requisitos
 
-- Node.js compatible con Astro 7.
+- Node.js `>=22.12.0` (requisito de Astro 7).
 - npm.
 
 ### Pasos
@@ -124,25 +128,29 @@ npm run test
 npm run build
 ```
 
-Firefox y WebKit se validan como smoke tests locales. La comprobación final en
-Safari/iOS, Android y dispositivos físicos queda como revisión manual antes del
-release público.
+Firefox y WebKit se validan como smoke tests locales. También se revisaron en
+producción los diagramas principales, errores de sintaxis, exportaciones,
+clipboard, navegación, responsive y compatibilidad manual en los dispositivos
+disponibles.
 
 ## Despliegue en Dokploy
 
 Mermaid Styler se publica como sitio estático. El build produce el directorio
-`dist/`, que debe ser servido por el runtime estático configurado en Dokploy.
+`dist/`, que Dokploy sirve detrás de Traefik.
 
-El flujo previsto es:
+Configuración utilizada en producción:
 
 ```bash
 npm install
 npm run build
-# servir dist/ con el runtime estático de Dokploy
+# Publish Directory: dist
+# Build Type: Railpack
+# RAILPACK_NODE_VERSION=22
+# Domain port: 80
 ```
 
-La configuración final de build, puerto y health check se cerrará durante la fase
-de release y quedará documentada aquí antes de publicar la demo.
+El repositorio `main` está conectado a Dokploy con despliegue automático por push.
+La demo pública utiliza HTTPS gestionado por Let’s Encrypt.
 
 ## Privacidad y límites
 
@@ -171,8 +179,7 @@ distribuye bajo licencia MIT. El texto de esa licencia está disponible en
 
 Mermaid Styler es un proyecto independiente y no es un producto oficial de
 Mermaid. Las licencias de Mermaid, Astro, fuentes, iconos y demás dependencias
-deben mantenerse revisadas en [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)
-antes del primer release público.
+se mantienen documentadas en [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
 ## Git flow
 
