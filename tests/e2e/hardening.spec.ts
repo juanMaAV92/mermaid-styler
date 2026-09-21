@@ -25,6 +25,31 @@ const fixtures = [
   },
 ];
 
+const htmlLabelFlowchart = `flowchart LR
+  EV[[SQS<br/>documentation-events]] --> UP[documentation-ms<br/>upload handler]
+
+  subgraph TASK["ECS task validation-ms · 2 vCPU / 4 GB · desired 1 (sin cambio)"]
+    GW[gateway]
+    API[document-api]
+    W[document-worker<br/>concurrency=1]
+  end
+
+  UP -- "POST /validate {reference}<br/>timeout 25 s" --> GW
+  UP -. "fallback en 503:<br/>POST /validate/async" .-> GW
+  GW -- "proxy" --> API
+  API -- "SET NX val:idem:{hash}<br/>TTL 24 h" --> IDEM[(Redis<br/>idempotencia)]
+  API -- "task.delay()" --> QP[(Redis<br/>validation_priority)]
+  QB[(Redis<br/>validation_backlog<br/>vacía en esta fase)]
+  QP --> W
+  QB --> W
+  W -- "publica veredicto SIEMPRE" --> RES[[SQS<br/>document-validation-results<br/>+ DLQ]]
+  RES --> RH[documentation-ms<br/>result handler]
+  RH --> DB[(PostgreSQL<br/>DocumentAiValidation<br/>+ task_id, status=pending)]
+  UP --> DB
+
+  classDef nuevo fill:#d4f4dd,stroke:#1a7f37,color:#0b3d1a;
+  class IDEM,QP,QB,RES,RH nuevo;`;
+
 const waitForReady = async (page: Page, previousSvgId?: string) => {
   if (previousSvgId) {
     await expect.poll(
@@ -49,6 +74,17 @@ test.describe('Mermaid Styler hardening', () => {
       expect(await page.locator('[data-svg-host] svg *').count()).toBeGreaterThan(0);
       previousSvgId = await page.locator('[data-svg-host] svg').getAttribute('id');
     }
+  });
+
+  test('renders Mermaid HTML line breaks without rejecting the generated SVG', async ({ page }) => {
+    await page.goto('/');
+    const editor = page.getByRole('textbox', { name: 'Paste a Mermaid definition here…' });
+    const previousSvgId = await page.locator('[data-svg-host] svg').getAttribute('id');
+
+    await editor.fill(htmlLabelFlowchart);
+    await waitForReady(page, previousSvgId ?? undefined);
+    await expect(page.getByRole('button', { name: 'Export SVG' })).toBeEnabled();
+    await expect(page.locator('[data-source-feedback]')).toBeHidden();
   });
 
   test('exports complex Unicode, long-label and transparent diagrams', async ({ page }) => {
