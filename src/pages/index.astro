@@ -6,11 +6,15 @@ import ArtifactStage from '../components/mermaid/ArtifactStage.astro';
 import MermaidEditor from '../components/mermaid/MermaidEditor.astro';
 import StyleRail from '../components/mermaid/StyleRail.astro';
 import messages from '../i18n/messages.en';
+import { DEFAULT_PRESET_ID, defaultPreset, toThemeVariables } from '../lib/theme/presets';
 import '../styles/global.css';
 
 const sampleSource = `flowchart LR
   A[AI-generated source] --> B{Style it}
   B --> C[Shareable artifact]`;
+const defaultThemeStyle = Object.entries(toThemeVariables(defaultPreset))
+  .map(([name, value]) => `${name}: ${value}`)
+  .join('; ');
 ---
 
 <html lang="en">
@@ -26,7 +30,7 @@ const sampleSource = `flowchart LR
   </head>
   <body>
     <!-- THESIS: turn Mermaid syntax into a shareable artifact; refuse generic dashboard chrome. OWN-WORLD: dark technical bench, paper stage, fine rules, cyan registration ink. STORY: paste, see, style, export. FIRST VIEWPORT: actions top, source left, artifact stage center, style rail right. FORM: proof bench, assigned direction 4, seed 32d896a2. FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md -->
-    <div class="app-shell" data-workbench data-preset="light">
+    <div class="app-shell" data-workbench data-preset={DEFAULT_PRESET_ID} style={defaultThemeStyle}>
       <header class="topbar">
         <a class="brand" href="/" aria-label={messages.brand}>
           <span class="brand-mark" aria-hidden="true"><Icon name="spark" size={18} /></span>

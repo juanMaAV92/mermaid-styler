@@ -2,12 +2,11 @@ import messages from '../i18n/messages.en';
 import { MermaidRenderError } from '../lib/mermaid/types';
 import type { MermaidRenderResult, MermaidThemeOptions, RenderMermaidOptions } from '../lib/mermaid/types';
 import { LatestWinsRenderCoordinator } from '../lib/mermaid/render-coordinator';
-import { getPreset } from '../lib/theme/presets';
+import { DEFAULT_PRESET_ID, defaultPreset, getPreset, toThemeVariables } from '../lib/theme/presets';
 import { isRenderState, type RenderState } from '../lib/ui/render-state';
-import { copyPngToClipboard, copyTextToClipboard } from '../lib/export/clipboard';
-import { downloadBlob } from '../lib/export/download';
-import { svgToPngBlob } from '../lib/export/png';
 import { addSvgMetadata } from '../lib/export/svg';
+import { createArtifactActionHandler } from './artifact-actions';
+import { initPreviewControls } from './preview-controls';
 
 type RenderStateOptions = {
   message?: string;
@@ -70,25 +69,6 @@ if (workbench) {
     timeout: { label: messages.stateTimeout, caption: messages.timeoutStateHint },
   };
 
-  const PREVIEW_ZOOM_MIN = 0.5;
-  const PREVIEW_ZOOM_MAX = 4;
-  const PREVIEW_ZOOM_STEP = 0.25;
-  const PREVIEW_PAN_LIMIT = 1200;
-  let previewScale = 1;
-  let previewPanX = 0;
-  let previewPanY = 0;
-  let activePointer: { id: number; startX: number; startY: number; panX: number; panY: number } | undefined;
-
-  const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
-
-  const applyPreviewTransform = () => {
-    if (!previewLayer) return;
-    previewLayer.style.setProperty('--preview-scale', String(previewScale));
-    previewLayer.style.setProperty('--preview-pan-x', `${previewPanX}px`);
-    previewLayer.style.setProperty('--preview-pan-y', `${previewPanY}px`);
-    if (previewZoom) previewZoom.value = `${Math.round(previewScale * 100)}%`;
-  };
-
   const getRenderedSvg = () => svgHost?.querySelector<SVGSVGElement>('svg');
 
   const getRenderedSvgMarkup = () => {
@@ -103,140 +83,35 @@ if (workbench) {
     source: includeSourceToggle?.checked ? sourceInput?.value ?? '' : undefined,
   });
 
-  const createPngBlob = async () => {
-    const svg = getRenderedSvg();
-    if (!svg) throw new Error('No rendered SVG is available.');
+  const getPngOptions = () => {
     const computed = getComputedStyle(workbench);
-    return svgToPngBlob(svg, {
+    return {
       fontFamily: computed.getPropertyValue('--diagram-font').trim() || 'sans-serif',
       fontSize: computed.getPropertyValue('--diagram-font-size').trim() || '16px',
-      textColor: computed.getPropertyValue('--diagram-text').trim() || '#20303a',
-      background: computed.getPropertyValue('--diagram-surface').trim() || '#f4f1e8',
+      textColor: computed.getPropertyValue('--diagram-text').trim() || defaultPreset.text,
+      background: computed.getPropertyValue('--diagram-surface').trim() || defaultPreset.surface,
       transparent: stage?.classList.contains('is-transparent') ?? false,
-    });
+    };
   };
 
   const announceArtifactAction = (message: string) => {
     if (liveStatus) liveStatus.textContent = message;
   };
 
-  const handleArtifactAction = async (action: string) => {
-    try {
-      if (action === 'export-svg') {
-        const blob = new Blob([getExportSvgMarkup()], { type: 'image/svg+xml;charset=utf-8' });
-        downloadBlob(blob, 'mermaid-diagram.svg');
-        announceArtifactAction(messages.svgExported);
-      }
-
-      if (action === 'copy-svg') {
-        await copyTextToClipboard(getExportSvgMarkup());
-        announceArtifactAction(messages.svgCopied);
-      }
-
-      if (action === 'export-png') {
-        downloadBlob(await createPngBlob(), 'mermaid-diagram.png');
-        announceArtifactAction(messages.pngExported);
-      }
-
-      if (action === 'copy-png') {
-        const blob = await createPngBlob();
-        if (await copyPngToClipboard(blob)) {
-          announceArtifactAction(messages.pngCopied);
-        } else {
-          downloadBlob(blob, 'mermaid-diagram.png');
-          announceArtifactAction(messages.pngClipboardFallback);
-        }
-      }
-    } catch {
-      announceArtifactAction(messages.artifactActionError);
-    }
-  };
-
-  const fitPreview = () => {
-    previewScale = 1;
-    previewPanX = 0;
-    previewPanY = 0;
-    applyPreviewTransform();
-  };
-
-  const setPreviewZoom = (nextScale: number) => {
-    previewScale = clamp(nextScale, PREVIEW_ZOOM_MIN, PREVIEW_ZOOM_MAX);
-    applyPreviewTransform();
-  };
-
-  const panPreview = (x: number, y: number) => {
-    previewPanX = clamp(x, -PREVIEW_PAN_LIMIT, PREVIEW_PAN_LIMIT);
-    previewPanY = clamp(y, -PREVIEW_PAN_LIMIT, PREVIEW_PAN_LIMIT);
-    applyPreviewTransform();
-  };
-
-  const endPreviewPointer = () => {
-    activePointer = undefined;
-    previewViewport?.classList.remove('is-dragging');
-    previewLayer?.classList.remove('is-dragging');
-  };
-
-  previewViewport?.addEventListener('pointerdown', (event) => {
-    if (event.button !== 0) return;
-    activePointer = {
-      id: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-      panX: previewPanX,
-      panY: previewPanY,
-    };
-    previewViewport.setPointerCapture(event.pointerId);
-    previewViewport.classList.add('is-dragging');
-    previewLayer?.classList.add('is-dragging');
+  const handleArtifactAction = createArtifactActionHandler({
+    getRenderedSvg,
+    getExportSvgMarkup,
+    getPngOptions,
+    messages,
+    announce: announceArtifactAction,
   });
 
-  previewViewport?.addEventListener('pointermove', (event) => {
-    if (!activePointer || activePointer.id !== event.pointerId) return;
-    event.preventDefault();
-    panPreview(
-      activePointer.panX + event.clientX - activePointer.startX,
-      activePointer.panY + event.clientY - activePointer.startY,
-    );
+  initPreviewControls({
+    viewport: previewViewport,
+    layer: previewLayer,
+    zoom: previewZoom,
+    actions: previewActions,
   });
-
-  previewViewport?.addEventListener('pointerup', endPreviewPointer);
-  previewViewport?.addEventListener('pointercancel', endPreviewPointer);
-  previewViewport?.addEventListener('lostpointercapture', endPreviewPointer);
-  previewViewport?.addEventListener('wheel', (event) => {
-    event.preventDefault();
-    setPreviewZoom(previewScale + (event.deltaY < 0 ? PREVIEW_ZOOM_STEP : -PREVIEW_ZOOM_STEP));
-  }, { passive: false });
-
-  previewActions.forEach((button) => {
-    button.addEventListener('click', () => {
-      const action = button.dataset.previewAction;
-      if (action === 'zoom-in') setPreviewZoom(previewScale + PREVIEW_ZOOM_STEP);
-      if (action === 'zoom-out') setPreviewZoom(previewScale - PREVIEW_ZOOM_STEP);
-      if (action === 'fit') fitPreview();
-    });
-  });
-
-  previewViewport?.addEventListener('keydown', (event) => {
-    if (event.key === '+' || event.key === '=') {
-      event.preventDefault();
-      setPreviewZoom(previewScale + PREVIEW_ZOOM_STEP);
-    }
-    if (event.key === '-') {
-      event.preventDefault();
-      setPreviewZoom(previewScale - PREVIEW_ZOOM_STEP);
-    }
-    if (event.key === '0') {
-      event.preventDefault();
-      fitPreview();
-    }
-    const panStep = event.shiftKey ? 80 : 32;
-    if (event.key === 'ArrowLeft') panPreview(previewPanX - panStep, previewPanY);
-    if (event.key === 'ArrowRight') panPreview(previewPanX + panStep, previewPanY);
-    if (event.key === 'ArrowUp') panPreview(previewPanX, previewPanY - panStep);
-    if (event.key === 'ArrowDown') panPreview(previewPanX, previewPanY + panStep);
-  });
-
-  applyPreviewTransform();
 
   const syncPresetTabStops = (selectedId?: string) => {
     const activeId = selectedId
@@ -293,12 +168,12 @@ if (workbench) {
     const fontSize = Number.parseInt(read('--diagram-font-size', '16px'), 10);
 
     return {
-      background: read('--diagram-surface', '#f4f1e8'),
-      primaryColor: read('--diagram-primary', '#d8eceb'),
-      primaryBorderColor: read('--diagram-border', '#50727c'),
-      primaryTextColor: read('--diagram-text', '#20303a'),
-      lineColor: read('--diagram-line', '#50727c'),
-      accentColor: read('--diagram-accent', '#69e6f7'),
+      background: read('--diagram-surface', defaultPreset.surface),
+      primaryColor: read('--diagram-primary', defaultPreset.primary),
+      primaryBorderColor: read('--diagram-border', defaultPreset.border),
+      primaryTextColor: read('--diagram-text', defaultPreset.text),
+      lineColor: read('--diagram-line', defaultPreset.line),
+      accentColor: read('--diagram-accent', defaultPreset.accent),
       fontFamily: read('--diagram-font', 'IBM Plex Sans, ui-sans-serif, sans-serif'),
       fontSize: Number.isFinite(fontSize) ? fontSize : 16,
       transparent: stage?.classList.contains('is-transparent') ?? false,
@@ -368,14 +243,7 @@ if (workbench) {
     workbench.dataset.preset = presetId;
     currentPreset?.replaceChildren(document.createTextNode(presetId[0].toUpperCase() + presetId.slice(1)));
 
-    const variables: Record<string, string> = {
-      '--diagram-primary': preset.primary,
-      '--diagram-border': preset.border,
-      '--diagram-text': preset.text,
-      '--diagram-line': preset.line,
-      '--diagram-accent': preset.accent,
-      '--diagram-surface': preset.surface,
-    };
+    const variables = toThemeVariables(preset);
 
     Object.entries(variables).forEach(([name, value]) => workbench.style.setProperty(name, value));
     presetButtons.forEach((button) => {
@@ -386,7 +254,8 @@ if (workbench) {
     syncPresetTabStops(presetId);
 
     workbench.querySelectorAll<HTMLInputElement>('[data-color-variable]').forEach((input) => {
-      const value = variables[input.dataset.colorVariable ?? ''];
+      const colorVariable = input.dataset.colorVariable as keyof typeof variables | undefined;
+      const value = colorVariable ? variables[colorVariable] : undefined;
       if (value) {
         input.value = value;
         const output = workbench.querySelector<HTMLElement>(`[data-color-value="${input.id}"]`);
@@ -407,7 +276,7 @@ if (workbench) {
 
   presetButtons.forEach((button) => {
     button.addEventListener('click', () => {
-      applyPreset(button.dataset.preset ?? 'light');
+      applyPreset(button.dataset.preset ?? DEFAULT_PRESET_ID);
       requestRender();
     });
   });
@@ -465,7 +334,7 @@ if (workbench) {
   });
 
   resetButton?.addEventListener('click', () => {
-    applyPreset('light');
+    applyPreset(DEFAULT_PRESET_ID);
     if (fontSelect) fontSelect.selectedIndex = 0;
     if (textSizeInput) textSizeInput.value = '16';
     if (textSizeOutput) textSizeOutput.value = '16px';

@@ -8,9 +8,34 @@ export type PngExportOptions = {
   maxPixels?: number;
 };
 
+export type PngExportResult = {
+  blob: Blob;
+  scale: number;
+  pixelCount: number;
+  wasScaled: boolean;
+};
+
 const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
 const DEFAULT_SCALE = 3;
-const DEFAULT_MAX_PIXELS = 16_000_000;
+const LOW_MEMORY_MAX_PIXELS = 4_000_000;
+const DEFAULT_MAX_PIXELS = 8_000_000;
+const HIGH_MEMORY_MAX_PIXELS = 16_000_000;
+
+type NavigatorWithDeviceMemory = Navigator & { deviceMemory?: number };
+
+export const getPngPixelBudget = (deviceMemory?: number) => {
+  const resolvedMemory = deviceMemory
+    ?? (typeof navigator === 'undefined' ? undefined : (navigator as NavigatorWithDeviceMemory).deviceMemory);
+
+  if (typeof resolvedMemory !== 'number') return DEFAULT_MAX_PIXELS;
+  if (resolvedMemory <= 2) return LOW_MEMORY_MAX_PIXELS;
+  if (resolvedMemory <= 4) return DEFAULT_MAX_PIXELS;
+  return HIGH_MEMORY_MAX_PIXELS;
+};
+
+export const getBoundedPngScale = (width: number, height: number, scale: number, maxPixels: number) => (
+  Math.min(scale, Math.sqrt(maxPixels / (width * height)))
+);
 
 const parseLength = (value: string | null) => {
   if (!value || value.trim().endsWith('%')) return undefined;
@@ -79,9 +104,10 @@ const getCanvasSafeMarkup = (svg: SVGSVGElement, options: PngExportOptions) => {
   return clone.outerHTML;
 };
 
-export const svgToPngBlob = async (svg: SVGSVGElement, options: PngExportOptions): Promise<Blob> => {
+export const svgToPngBlob = async (svg: SVGSVGElement, options: PngExportOptions): Promise<PngExportResult> => {
   const sourceUrl = URL.createObjectURL(new Blob([getCanvasSafeMarkup(svg, options)], { type: 'image/svg+xml;charset=utf-8' }));
   const image = new Image();
+  let canvas: HTMLCanvasElement | undefined;
 
   try {
     const loaded = new Promise<void>((resolve, reject) => {
@@ -95,31 +121,45 @@ export const svgToPngBlob = async (svg: SVGSVGElement, options: PngExportOptions
     const dimensions = getDimensions(svg);
     if (!dimensions.width || !dimensions.height) throw new Error('The SVG has no usable dimensions.');
 
-    const scale = options.scale ?? DEFAULT_SCALE;
-    const maxPixels = options.maxPixels ?? DEFAULT_MAX_PIXELS;
-    const requestedPixels = dimensions.width * dimensions.height * scale * scale;
-    const boundedScale = Math.min(scale, Math.sqrt(maxPixels / requestedPixels));
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.max(1, Math.ceil(dimensions.width * boundedScale));
-    canvas.height = Math.max(1, Math.ceil(dimensions.height * boundedScale));
+    const scale = Math.max(0.01, options.scale ?? DEFAULT_SCALE);
+    const maxPixels = Math.max(1, options.maxPixels ?? getPngPixelBudget());
+    const boundedScale = getBoundedPngScale(dimensions.width, dimensions.height, scale, maxPixels);
+    const canvasElement = document.createElement('canvas');
+    canvas = canvasElement;
+    canvasElement.width = Math.max(1, Math.ceil(dimensions.width * boundedScale));
+    canvasElement.height = Math.max(1, Math.ceil(dimensions.height * boundedScale));
 
-    const context = canvas.getContext('2d');
+    const context = canvasElement.getContext('2d');
     if (!context) throw new Error('Canvas is not available in this browser.');
 
     if (!options.transparent) {
       context.fillStyle = options.background;
-      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.fillRect(0, 0, canvasElement.width, canvasElement.height);
     }
 
-    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    context.drawImage(image, 0, 0, canvasElement.width, canvasElement.height);
 
-    return await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob((blob) => {
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      canvasElement.toBlob((blob) => {
         if (blob) resolve(blob);
         else reject(new Error('PNG encoding failed.'));
       }, 'image/png');
     });
+
+    return {
+      blob,
+      scale: boundedScale,
+      pixelCount: canvasElement.width * canvasElement.height,
+      wasScaled: boundedScale < scale,
+    };
   } finally {
+    image.onload = null;
+    image.onerror = null;
+    image.src = '';
+    if (canvas) {
+      canvas.width = 1;
+      canvas.height = 1;
+    }
     URL.revokeObjectURL(sourceUrl);
   }
 };

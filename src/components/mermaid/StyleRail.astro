@@ -2,6 +2,7 @@
 import ColorField from '../ui/ColorField.astro';
 import Icon from '../ui/Icon.astro';
 import PresetList from './PresetList.astro';
+import { defaultPreset, presetIds, presets as themePresets } from '../../lib/theme/presets';
 
 interface Props {
   labels: {
@@ -33,13 +34,18 @@ interface Props {
 }
 
 const { labels } = Astro.props;
-const presets = [
-  { id: 'light', label: labels.presetLight, colors: ['#f4f1e8', '#d8eceb', '#20303a'] },
-  { id: 'dark', label: labels.presetDark, colors: ['#151c24', '#304c63', '#69e6f7'] },
-  { id: 'terminal', label: labels.presetTerminal, colors: ['#07120f', '#183d2e', '#8ef0b4'] },
-  { id: 'paper', label: labels.presetPaper, colors: ['#f4f1e8', '#f1d7bb', '#3f3028'] },
-  { id: 'architecture', label: labels.presetArchitecture, colors: ['#e6edf0', '#cad9df', '#19313c'] },
-];
+const presetLabels = {
+  light: labels.presetLight,
+  dark: labels.presetDark,
+  terminal: labels.presetTerminal,
+  paper: labels.presetPaper,
+  architecture: labels.presetArchitecture,
+};
+const presets = presetIds.map((id) => ({
+  id,
+  label: presetLabels[id],
+  colors: [themePresets[id].surface, themePresets[id].primary, themePresets[id].text],
+}));
 ---
 
 <aside class="panel panel--style" aria-labelledby="style-title">
@@ -60,11 +66,11 @@ const presets = [
     <fieldset class="style-section">
       <legend>{labels.colors}</legend>
       <div class="color-grid">
-        <ColorField id="primary-color" label={labels.primaryColor} value="#d8eceb" variable="--diagram-primary" />
-        <ColorField id="border-color" label={labels.borderColor} value="#50727c" variable="--diagram-border" />
-        <ColorField id="text-color" label={labels.textColor} value="#20303a" variable="--diagram-text" />
-        <ColorField id="line-color" label={labels.lineColor} value="#50727c" variable="--diagram-line" />
-        <ColorField id="accent-color" label={labels.accentColor} value="#69e6f7" variable="--diagram-accent" />
+        <ColorField id="primary-color" label={labels.primaryColor} value={defaultPreset.primary} variable="--diagram-primary" />
+        <ColorField id="border-color" label={labels.borderColor} value={defaultPreset.border} variable="--diagram-border" />
+        <ColorField id="text-color" label={labels.textColor} value={defaultPreset.text} variable="--diagram-text" />
+        <ColorField id="line-color" label={labels.lineColor} value={defaultPreset.line} variable="--diagram-line" />
+        <ColorField id="accent-color" label={labels.accentColor} value={defaultPreset.accent} variable="--diagram-accent" />
       </div>
     </fieldset>
 

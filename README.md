@@ -52,6 +52,7 @@ Dokploy.
 - SVG con título y descripción accesibles; el source Mermaid solo se incluye si se activa explícitamente antes de exportar.
 - Mensajes claros para código inválido, límites de entrada y timeouts.
 - Renderizado local, cola de renders latest-wins y límites de recursos para evitar trabajo acumulado.
+- Exportación PNG con presupuesto de memoria adaptativo y aviso si se reduce la resolución.
 - Diseño usable en desktop y móvil.
 - Sitio estático desplegable en Dokploy.
 
@@ -115,6 +116,8 @@ npm run dev       # servidor de desarrollo
 npm run typecheck # validación de TypeScript
 npm run build     # build estático en dist/
 npm run preview   # sirve localmente el build generado
+npm run test       # unitarias + E2E en Chromium
+npm run test:e2e:cross-browser # smoke E2E en Firefox y WebKit (tras instalarlos)
 ```
 
 ## QA automatizado
@@ -129,10 +132,10 @@ npm run test
 npm run build
 ```
 
-Firefox y WebKit se validan como smoke tests locales. También se revisaron en
-producción los diagramas principales, errores de sintaxis, exportaciones,
-clipboard, navegación, responsive y compatibilidad manual en los dispositivos
-disponibles.
+GitHub Actions valida cada cambio a `main` con Chromium y ejecuta un smoke test
+en Firefox y WebKit. También se revisaron en producción los diagramas
+principales, errores de sintaxis, exportaciones, clipboard, navegación,
+responsive y compatibilidad manual en los dispositivos disponibles.
 
 ## Despliegue en Dokploy
 
@@ -146,7 +149,7 @@ npm install
 npm run build
 # Publish Directory: dist
 # Build Type: Railpack
-# RAILPACK_NODE_VERSION=22
+# RAILPACK_NODE_VERSION=22.12.0
 # Domain port: 80
 ```
 
@@ -162,6 +165,7 @@ La demo pública utiliza HTTPS gestionado por Let’s Encrypt.
 - El input se limita a 50.000 caracteres, 2.000 líneas y 1.200 conexiones estimadas para proteger el navegador.
 - Los SVG se sanitizan antes de mostrarse, copiarse o descargarse.
 - El source Mermaid no se incrusta en SVG por defecto; activar la opción de exportación solo si compartir el código es seguro.
+- El PNG ajusta su presupuesto de píxeles según la memoria disponible del navegador para proteger dispositivos con menos recursos.
 - Las diferencias de soporte de estilos entre familias de diagramas Mermaid se documentarán como parte del MVP.
 
 ## Documentación
