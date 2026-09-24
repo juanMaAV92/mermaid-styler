@@ -49,6 +49,7 @@ Dokploy.
 - Controles para fondo, cajas, bordes, texto, líneas, énfasis, tipografía, tamaño y transparencia.
 - Descarga de SVG y PNG.
 - Copiar SVG y copiar la imagen cuando el navegador lo permita.
+- SVG con título y descripción accesibles; el source Mermaid solo se incluye si se activa explícitamente antes de exportar.
 - Mensajes claros para código inválido, límites de entrada y timeouts.
 - Renderizado local, cola de renders latest-wins y límites de recursos para evitar trabajo acumulado.
 - Diseño usable en desktop y móvil.
@@ -158,7 +159,9 @@ La demo pública utiliza HTTPS gestionado por Let’s Encrypt.
 - La aplicación no crea cuentas ni almacena diagramas después de recargar.
 - La primera versión no incluye backend ni endpoint remoto.
 - El renderizado se limita a una operación activa y un render pendiente como máximo.
+- El input se limita a 50.000 caracteres, 2.000 líneas y 1.200 conexiones estimadas para proteger el navegador.
 - Los SVG se sanitizan antes de mostrarse, copiarse o descargarse.
+- El source Mermaid no se incrusta en SVG por defecto; activar la opción de exportación solo si compartir el código es seguro.
 - Las diferencias de soporte de estilos entre familias de diagramas Mermaid se documentarán como parte del MVP.
 
 ## Documentación

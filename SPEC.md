@@ -140,7 +140,7 @@ El resultado nunca debe incluir una referencia a un nodo permanente de la aplica
 
 1. El editor actualiza el source en memoria.
 2. El coordinador aplica debounce.
-3. Se valida longitud y contenido vacío.
+3. Se valida contenido vacío, longitud y presupuesto preventivo de líneas/conexiones.
 4. Se crea un `requestId` monotónico.
 5. Si hay un render pendiente, se reemplaza por la petición más reciente.
 6. Se ejecuta como máximo un render activo.
@@ -158,7 +158,7 @@ Un error del source actual no debe borrar silenciosamente el último preview vá
 - Escritura: debounce de 250–350 ms.
 - Cambios de estilo: actualización más corta, sin saltarse la cola latest-wins.
 - Concurrencia: un render Mermaid activo y como máximo uno pendiente.
-- Timeout: watchdog configurable; el valor final se definirá con pruebas de diagramas grandes.
+- Timeout: watchdog configurable; no se presenta como cancelación de trabajo síncrono. Los límites preventivos actuales son 50.000 caracteres, 2.000 líneas y 1.200 conexiones estimadas.
 - DOM: un SVG visible y ningún contenedor auxiliar persistente por render.
 - PNG: un canvas temporal por exportación; liberar dimensiones y referencias al finalizar.
 - URLs: revocar cada `URL.createObjectURL()` después de su uso.
@@ -173,7 +173,7 @@ El coordinador debe ser testeable sin depender del DOM completo: entrada de peti
 - No permitir que directives del source sobrescriban las configuraciones seguras de la aplicación.
 - Usar el nivel de seguridad más restrictivo compatible con los diagramas soportados.
 - Mantener Mermaid dentro de un contenedor aislado y sin hermanos manipulables por el SVG.
-- Sanitizar scripts, event handlers, referencias externas y contenido no permitido.
+- Sanitizar las etiquetas HTML de `foreignObject` con DOMPurify y eliminar scripts, event handlers, referencias externas, imágenes y contenido no permitido del SVG.
 - Probar `foreignObject`, enlaces, `classDef`, etiquetas, IDs repetidos y diagramas generados por IA.
 - No asumir que la sanitización de Mermaid reemplaza la revisión propia del SVG exportado.
 - Rechazar o degradar con claridad diagramas que no puedan mostrarse de forma segura.
@@ -200,6 +200,7 @@ Los valores del diagrama se transforman a `themeVariables` mediante un adaptador
 - Preservar `viewBox`, dimensiones, estilos y transparencia.
 - Crear un `Blob` y revocar el object URL después de la descarga.
 - Añadir título y descripción accesibles cuando el pipeline lo permita.
+- No incrustar el source Mermaid en el SVG por defecto; ofrecer una elección explícita cuando se necesite como alternativa textual.
 - Mantener una acción para copiar el source Mermaid como alternativa textual.
 
 ### PNG

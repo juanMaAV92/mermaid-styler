@@ -1,7 +1,7 @@
 export type SvgMetadata = {
   title: string;
   description: string;
-  source: string;
+  source?: string;
 };
 
 const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
@@ -20,20 +20,22 @@ export const addSvgMetadata = (markup: string, metadata: SvgMetadata) => {
   const descriptionId = 'mermaid-styler-export-description';
   const title = document.createElementNS(SVG_NAMESPACE, 'title');
   const description = document.createElementNS(SVG_NAMESPACE, 'desc');
-  const sourceMetadata = document.createElementNS(SVG_NAMESPACE, 'metadata');
-  const source = document.createElementNS(SVG_NAMESPACE, 'mermaid-source');
 
   title.id = titleId;
   title.textContent = metadata.title;
   description.id = descriptionId;
   description.textContent = metadata.description;
-  source.textContent = metadata.source;
-  sourceMetadata.appendChild(source);
   root.setAttribute('role', 'img');
   root.setAttribute('aria-labelledby', `${titleId} ${descriptionId}`);
   root.insertBefore(title, root.firstChild);
   root.insertBefore(description, title.nextSibling);
-  root.appendChild(sourceMetadata);
+  if (metadata.source !== undefined) {
+    const sourceMetadata = document.createElementNS(SVG_NAMESPACE, 'metadata');
+    const source = document.createElementNS(SVG_NAMESPACE, 'mermaid-source');
+    source.textContent = metadata.source;
+    sourceMetadata.appendChild(source);
+    root.appendChild(sourceMetadata);
+  }
 
   return new XMLSerializer().serializeToString(root);
 };

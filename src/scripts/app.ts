@@ -46,6 +46,7 @@ if (workbench) {
   const textSizeOutput = workbench.querySelector<HTMLOutputElement>('[data-text-size]');
   const fontSelect = workbench.querySelector<HTMLSelectElement>('[data-font-select]');
   const transparentToggle = workbench.querySelector<HTMLInputElement>('[data-transparent-toggle]');
+  const includeSourceToggle = workbench.querySelector<HTMLInputElement>('[data-include-source-toggle]');
   const resetButton = workbench.querySelector<HTMLButtonElement>('[data-reset-styles]');
   const sourceFeedback = workbench.querySelector<HTMLElement>('[data-source-feedback]');
   const sourceFeedbackTitle = workbench.querySelector<HTMLElement>('[data-source-feedback-title]');
@@ -99,7 +100,7 @@ if (workbench) {
   const getExportSvgMarkup = () => addSvgMetadata(getRenderedSvgMarkup(), {
     title: messages.exportTitle,
     description: messages.exportDescription,
-    source: sourceInput?.value ?? '',
+    source: includeSourceToggle?.checked ? sourceInput?.value ?? '' : undefined,
   });
 
   const createPngBlob = async () => {
