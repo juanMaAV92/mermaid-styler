@@ -822,6 +822,18 @@ kbd {
   font-size: 12px;
 }
 
+.toggle-field__copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.toggle-field__copy small {
+  color: var(--steel);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
 .select-field + .range-field {
   margin-top: var(--space-4);
 }

@@ -17,6 +17,9 @@ interface Props {
     colors: string;
     typography: string;
     background: string;
+    exportOptions: string;
+    includeSource: string;
+    includeSourceHint: string;
     primaryColor: string;
     borderColor: string;
     textColor: string;
@@ -87,6 +90,18 @@ const presets = [
       <label class="toggle-field" for="transparent-background">
         <span>{labels.transparent}</span>
         <input id="transparent-background" type="checkbox" data-transparent-toggle />
+        <span class="toggle-track" aria-hidden="true"><span></span></span>
+      </label>
+    </fieldset>
+
+    <fieldset class="style-section">
+      <legend>{labels.exportOptions}</legend>
+      <label class="toggle-field" for="include-source">
+        <span class="toggle-field__copy">
+          <span>{labels.includeSource}</span>
+          <small>{labels.includeSourceHint}</small>
+        </span>
+        <input id="include-source" type="checkbox" data-include-source-toggle />
         <span class="toggle-track" aria-hidden="true"><span></span></span>
       </label>
     </fieldset>

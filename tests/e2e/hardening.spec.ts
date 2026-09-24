@@ -87,6 +87,31 @@ test.describe('Mermaid Styler hardening', () => {
     await expect(page.locator('[data-source-feedback]')).toBeHidden();
   });
 
+  test('removes external SVG URL references from the rendered preview', async ({ page }) => {
+    await page.goto('/');
+    const sanitized = await page.evaluate(async () => {
+      const sanitizerUrl = new URL('/src/lib/mermaid/sanitize-svg.ts', window.location.origin).href;
+      const { sanitizeSvg } = await import(/* @vite-ignore */ sanitizerUrl) as {
+        sanitizeSvg: (svg: string) => string;
+      };
+      return sanitizeSvg(`
+        <svg xmlns="http://www.w3.org/2000/svg">
+          <rect fill="url(https://example.com/asset.svg)" onclick="alert(1)" />
+          <a href="https://example.com">external link</a>
+          <foreignObject width="100" height="30">
+            <div xmlns="http://www.w3.org/1999/xhtml"><p onerror="alert(1)">Safe label</p><img src="https://example.com/asset.png" /></div>
+          </foreignObject>
+        </svg>
+      `);
+    });
+
+    expect(sanitized).not.toContain('https://example.com');
+    expect(sanitized).not.toContain('onclick');
+    expect(sanitized).not.toContain('onerror');
+    expect(sanitized).not.toContain('<img');
+    expect(sanitized).toContain('Safe label');
+  });
+
   test('exports complex Unicode, long-label and transparent diagrams', async ({ page }) => {
     await page.goto('/');
     const editor = page.getByRole('textbox', { name: 'Paste a Mermaid definition here…' });
@@ -107,8 +132,18 @@ test.describe('Mermaid Styler hardening', () => {
     const svgContent = await readFile(svgPath, 'utf8');
     expect(svgContent).toContain('<title');
     expect(svgContent).toContain('<desc');
-    expect(svgContent).toContain('mermaid-source');
-    expect(svgContent).toContain('🚀');
+    expect(svgContent).not.toContain('mermaid-source');
+    expect(svgContent).not.toContain(longLabel);
+
+    await page.getByRole('checkbox', { name: 'Include Mermaid source in SVG' }).check();
+    const sourceSvgDownload = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Export SVG' }).click();
+    const sourceSvg = await sourceSvgDownload;
+    const sourceSvgPath = await sourceSvg.path();
+    if (!sourceSvgPath) throw new Error('SVG download path is unavailable.');
+    const sourceSvgContent = await readFile(sourceSvgPath, 'utf8');
+    expect(sourceSvgContent).toContain('mermaid-source');
+    expect(sourceSvgContent).toContain('🚀');
 
     const pngDownload = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Export PNG' }).click();

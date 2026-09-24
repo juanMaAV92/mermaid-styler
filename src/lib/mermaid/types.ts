@@ -19,6 +19,7 @@ export type RenderMermaidOptions = {
 export type RenderErrorCode =
   | 'EMPTY_SOURCE'
   | 'SOURCE_TOO_LARGE'
+  | 'SOURCE_TOO_COMPLEX'
   | 'PARSE_ERROR'
   | 'RENDER_TIMEOUT'
   | 'RENDER_ERROR'
