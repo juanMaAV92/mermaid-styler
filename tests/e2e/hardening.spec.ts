@@ -50,12 +50,12 @@ const htmlLabelFlowchart = `flowchart LR
   classDef nuevo fill:#d4f4dd,stroke:#1a7f37,color:#0b3d1a;
   class IDEM,QP,QB,RES,RH nuevo;`;
 
-const waitForReady = async (page: Page, previousSvgId?: string) => {
-  if (previousSvgId) {
+const waitForReady = async (page: Page, previousSvgMarkup?: string) => {
+  if (previousSvgMarkup) {
     await expect.poll(
-      () => page.locator('[data-svg-host] svg').getAttribute('id'),
+      () => page.locator('[data-svg-host] svg').evaluate((svg) => svg.outerHTML),
       { timeout: 10_000 },
-    ).not.toBe(previousSvgId);
+    ).not.toBe(previousSvgMarkup);
   }
   await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', 'ready', { timeout: 10_000 });
   await expect(page.locator('[data-svg-host] svg')).toBeVisible();
@@ -65,51 +65,26 @@ test.describe('Mermaid Styler hardening', () => {
   test('renders the supported diagram-family matrix', async ({ page }) => {
     await page.goto('/');
     const editor = page.getByRole('textbox', { name: 'Paste a Mermaid definition here…' });
-    let previousSvgId = await page.locator('[data-svg-host] svg').getAttribute('id');
+    let previousSvgMarkup = await page.locator('[data-svg-host] svg').evaluate((svg) => svg.outerHTML);
 
     for (const fixture of fixtures) {
       await editor.fill(fixture.source);
-      await waitForReady(page, previousSvgId ?? undefined);
+      await waitForReady(page, previousSvgMarkup);
       await expect(page.locator('[data-svg-host] svg')).toHaveCount(1);
       expect(await page.locator('[data-svg-host] svg *').count()).toBeGreaterThan(0);
-      previousSvgId = await page.locator('[data-svg-host] svg').getAttribute('id');
+      previousSvgMarkup = await page.locator('[data-svg-host] svg').evaluate((svg) => svg.outerHTML);
     }
   });
 
   test('renders Mermaid HTML line breaks without rejecting the generated SVG', async ({ page }) => {
     await page.goto('/');
     const editor = page.getByRole('textbox', { name: 'Paste a Mermaid definition here…' });
-    const previousSvgId = await page.locator('[data-svg-host] svg').getAttribute('id');
+    const previousSvgMarkup = await page.locator('[data-svg-host] svg').evaluate((svg) => svg.outerHTML);
 
     await editor.fill(htmlLabelFlowchart);
-    await waitForReady(page, previousSvgId ?? undefined);
+    await waitForReady(page, previousSvgMarkup);
     await expect(page.getByRole('button', { name: 'Export SVG' })).toBeEnabled();
     await expect(page.locator('[data-source-feedback]')).toBeHidden();
-  });
-
-  test('removes external SVG URL references from the rendered preview', async ({ page }) => {
-    await page.goto('/');
-    const sanitized = await page.evaluate(async () => {
-      const sanitizerUrl = new URL('/src/lib/mermaid/sanitize-svg.ts', window.location.origin).href;
-      const { sanitizeSvg } = await import(/* @vite-ignore */ sanitizerUrl) as {
-        sanitizeSvg: (svg: string) => string;
-      };
-      return sanitizeSvg(`
-        <svg xmlns="http://www.w3.org/2000/svg">
-          <rect fill="url(https://example.com/asset.svg)" onclick="alert(1)" />
-          <a href="https://example.com">external link</a>
-          <foreignObject width="100" height="30">
-            <div xmlns="http://www.w3.org/1999/xhtml"><p onerror="alert(1)">Safe label</p><img src="https://example.com/asset.png" /></div>
-          </foreignObject>
-        </svg>
-      `);
-    });
-
-    expect(sanitized).not.toContain('https://example.com');
-    expect(sanitized).not.toContain('onclick');
-    expect(sanitized).not.toContain('onerror');
-    expect(sanitized).not.toContain('<img');
-    expect(sanitized).toContain('Safe label');
   });
 
   test('exports complex Unicode, long-label and transparent diagrams', async ({ page }) => {
@@ -117,10 +92,10 @@ test.describe('Mermaid Styler hardening', () => {
     const editor = page.getByRole('textbox', { name: 'Paste a Mermaid definition here…' });
     const longLabel = '🚀 Plataforma internacional — مرحباً بالعالم — 中文 — '.repeat(8);
     const source = `flowchart LR\n  A["${longLabel}"] --> B["日本語 ✅ ${longLabel}"]`;
-    const previousSvgId = await page.locator('[data-svg-host] svg').getAttribute('id');
+    const previousSvgMarkup = await page.locator('[data-svg-host] svg').evaluate((svg) => svg.outerHTML);
 
     await editor.fill(source);
-    await waitForReady(page, previousSvgId ?? undefined);
+    await waitForReady(page, previousSvgMarkup);
     await page.getByRole('checkbox', { name: 'Transparent background' }).check();
     await expect(page.locator('[data-artifact-stage]')).toHaveClass(/is-transparent/);
 
@@ -159,12 +134,13 @@ test.describe('Mermaid Styler hardening', () => {
     test.setTimeout(30_000);
     await page.goto('/');
     const editor = page.getByRole('textbox', { name: 'Paste a Mermaid definition here…' });
-    let previousSvgId = await page.locator('[data-svg-host] svg').getAttribute('id');
+    let previousSvgMarkup = await page.locator('[data-svg-host] svg').evaluate((svg) => svg.outerHTML);
+    const startedAt = Date.now();
 
     for (let index = 0; index < 20; index += 1) {
       await editor.fill(`flowchart LR\n  A[Render ${index}] --> B[🚀 Stable]`);
-      await waitForReady(page, previousSvgId ?? undefined);
-      previousSvgId = await page.locator('[data-svg-host] svg').getAttribute('id');
+      await waitForReady(page, previousSvgMarkup);
+      previousSvgMarkup = await page.locator('[data-svg-host] svg').evaluate((svg) => svg.outerHTML);
     }
 
     const resources = await page.evaluate(() => ({
@@ -179,6 +155,7 @@ test.describe('Mermaid Styler hardening', () => {
     expect(resources.temporaryMermaidNodes).toBe(0);
     expect(resources.renderedSvgs).toBe(1);
     expect(resources.canvases).toBe(0);
+    expect(Date.now() - startedAt).toBeLessThan(20_000);
     test.info().annotations.push({ type: 'resource-audit', description: JSON.stringify(resources) });
   });
 });

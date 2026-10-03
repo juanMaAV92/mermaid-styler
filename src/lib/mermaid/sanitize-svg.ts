@@ -3,7 +3,7 @@ import { MermaidRenderError } from './types';
 
 const isFragmentReference = (value: string) => value.trim().startsWith('#');
 
-const containsExternalCssUrl = (value: string): boolean => {
+export const hasExternalCssUrl = (value: string): boolean => {
   const urls = [...value.matchAll(/url\(\s*(['"]?)(.*?)\1\s*\)/gi)].map((match) => match[2].trim());
   return urls.some((url) => url && !isFragmentReference(url));
 };
@@ -12,7 +12,7 @@ const containsExternalCssUrl = (value: string): boolean => {
 // but the SVG/XML parser used for sanitization requires a self-closing tag.
 // Keep the normalization intentionally narrow: it only repairs Mermaid line
 // breaks before the document is parsed and sanitized.
-const normalizeMermaidLineBreaks = (svg: string): string => svg.replace(
+export const normalizeMermaidLineBreaks = (svg: string): string => svg.replace(
   /<br\b([^>]*)>/gi,
   (match, attributes: string) => (/\/\s*$/.test(attributes) ? match : `<br${attributes}/>`),
 );
@@ -48,13 +48,13 @@ export const sanitizeSvg = (svg: string): string => {
       if (
         name.startsWith('on')
         || (name === 'href' || name === 'xlink:href' || name === 'src' || name === 'srcset')
-        || containsExternalCssUrl(value)
+        || hasExternalCssUrl(value)
       ) {
         element.removeAttribute(attribute.name);
       }
     });
 
-    if (element.tagName.toLowerCase() === 'style' && containsExternalCssUrl(element.textContent ?? '')) {
+    if (element.tagName.toLowerCase() === 'style' && hasExternalCssUrl(element.textContent ?? '')) {
       element.remove();
     }
   });

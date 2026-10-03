@@ -8,7 +8,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   reporter: 'list',
   use: {
-    baseURL: 'http://127.0.0.1:4321',
+    baseURL: 'http://127.0.0.1:4322',
     trace: 'retain-on-failure',
   },
   projects: [
@@ -28,8 +28,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run dev -- --host 127.0.0.1',
-    url: 'http://127.0.0.1:4321',
+    command: 'PLAYWRIGHT_PORT=4322 node scripts/serve-static.mjs',
+    url: 'http://127.0.0.1:4322',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },

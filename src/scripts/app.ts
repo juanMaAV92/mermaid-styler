@@ -1,18 +1,13 @@
 import messages from '../i18n/messages.en';
 import { MermaidRenderError } from '../lib/mermaid/types';
-import type { MermaidRenderResult, MermaidThemeOptions, RenderMermaidOptions } from '../lib/mermaid/types';
+import type { MermaidRenderResult, RenderMermaidOptions } from '../lib/mermaid/types';
 import { LatestWinsRenderCoordinator } from '../lib/mermaid/render-coordinator';
-import { DEFAULT_PRESET_ID, defaultPreset, getPreset, toThemeVariables } from '../lib/theme/presets';
 import { isRenderState, type RenderState } from '../lib/ui/render-state';
 import { addSvgMetadata } from '../lib/export/svg';
 import { createArtifactActionHandler } from './artifact-actions';
 import { initPreviewControls } from './preview-controls';
-
-type RenderStateOptions = {
-  message?: string;
-  detail?: string;
-  hasArtifact?: boolean;
-};
+import { createRenderStateController, type RenderStateOptions } from './render-state-controller';
+import { initThemeControls } from './theme-controls';
 
 type RenderStateEvent = RenderStateOptions & { state: RenderState };
 
@@ -61,14 +56,6 @@ if (workbench) {
   let renderRequestToken = 0;
   let requestRender = () => undefined;
 
-  const stateCopy: Record<RenderState, { label: string; caption: string }> = {
-    empty: { label: messages.stateEmpty, caption: messages.emptyState },
-    rendering: { label: messages.stateRendering, caption: messages.renderingState },
-    ready: { label: messages.stateReady, caption: messages.readyState },
-    error: { label: messages.stateInvalid, caption: messages.invalidStateHint },
-    timeout: { label: messages.stateTimeout, caption: messages.timeoutStateHint },
-  };
-
   const getRenderedSvg = () => svgHost?.querySelector<SVGSVGElement>('svg');
 
   const getRenderedSvgMarkup = () => {
@@ -83,28 +70,9 @@ if (workbench) {
     source: includeSourceToggle?.checked ? sourceInput?.value ?? '' : undefined,
   });
 
-  const getPngOptions = () => {
-    const computed = getComputedStyle(workbench);
-    return {
-      fontFamily: computed.getPropertyValue('--diagram-font').trim() || 'sans-serif',
-      fontSize: computed.getPropertyValue('--diagram-font-size').trim() || '16px',
-      textColor: computed.getPropertyValue('--diagram-text').trim() || defaultPreset.text,
-      background: computed.getPropertyValue('--diagram-surface').trim() || defaultPreset.surface,
-      transparent: stage?.classList.contains('is-transparent') ?? false,
-    };
-  };
-
   const announceArtifactAction = (message: string) => {
     if (liveStatus) liveStatus.textContent = message;
   };
-
-  const handleArtifactAction = createArtifactActionHandler({
-    getRenderedSvg,
-    getExportSvgMarkup,
-    getPngOptions,
-    messages,
-    announce: announceArtifactAction,
-  });
 
   initPreviewControls({
     viewport: previewViewport,
@@ -113,72 +81,45 @@ if (workbench) {
     actions: previewActions,
   });
 
-  const syncPresetTabStops = (selectedId?: string) => {
-    const activeId = selectedId
-      ?? presetButtons.find((button) => button.getAttribute('aria-selected') === 'true')?.dataset.preset
-      ?? presetButtons[0]?.dataset.preset;
-    presetButtons.forEach((button) => {
-      button.tabIndex = button.dataset.preset === activeId ? 0 : -1;
-    });
-  };
+  const renderStateController = createRenderStateController({
+    workbench,
+    stage,
+    stageStatus,
+    stageCaption,
+    stageStateViews,
+    stageNotices,
+    sourceFeedback,
+    sourceFeedbackTitle,
+    sourceFeedbackBody,
+    stateBadge,
+    liveStatus,
+    actionButtons,
+    messages,
+  });
+  const applyRenderState = renderStateController.setRenderState;
 
-  const applyRenderState = (state: RenderState, options: RenderStateOptions = {}) => {
-    if (options.hasArtifact !== undefined) {
-      workbench.dataset.hasArtifact = String(options.hasArtifact);
-    }
+  const themeControls = initThemeControls({
+    workbench,
+    stage,
+    currentPreset,
+    presetList,
+    presetButtons,
+    textSizeInput,
+    textSizeOutput,
+    fontSelect,
+    transparentToggle,
+    resetButton,
+    customPresetLabel: messages.customPreset,
+    onChange: () => requestRender(),
+  });
 
-    const hasArtifact = workbench.dataset.hasArtifact === 'true';
-    const isError = state === 'error' || state === 'timeout';
-    const baseState = isError ? (hasArtifact ? 'ready' : 'empty') : state;
-    const copy = stateCopy[state];
-
-    workbench.dataset.renderState = state;
-    if (stage) stage.dataset.renderState = state;
-    stageStateViews.forEach((view) => {
-      view.hidden = view.dataset.stateView !== baseState;
-    });
-    stageNotices.forEach((notice) => {
-      notice.hidden = notice.dataset.stateNotice !== state || !isError;
-    });
-
-    if (stageStatus) stageStatus.textContent = copy.label;
-    if (stageCaption) stageCaption.textContent = options.message ?? copy.caption;
-    if (stateBadge) {
-      stateBadge.textContent = copy.label;
-      stateBadge.classList.toggle('status-badge--active', state === 'ready');
-      stateBadge.classList.toggle('status-badge--warning', isError);
-    }
-    if (liveStatus) {
-      liveStatus.textContent = `${messages.statusAnnounce}: ${copy.label}. ${options.message ?? copy.caption}`;
-    }
-
-    if (sourceFeedback) sourceFeedback.hidden = !isError;
-    if (sourceFeedbackTitle) sourceFeedbackTitle.textContent = copy.label;
-    if (sourceFeedbackBody) {
-      sourceFeedbackBody.textContent = options.detail ?? (state === 'timeout' ? messages.timeoutStateHint : messages.errorFallback);
-    }
-
-    const canUseArtifact = hasArtifact && state !== 'empty' && state !== 'rendering';
-    actionButtons.forEach((button) => { button.disabled = !canUseArtifact; });
-  };
-
-  const readThemeOptions = (): MermaidThemeOptions => {
-    const computed = getComputedStyle(workbench);
-    const read = (name: string, fallback: string) => computed.getPropertyValue(name).trim() || fallback;
-    const fontSize = Number.parseInt(read('--diagram-font-size', '16px'), 10);
-
-    return {
-      background: read('--diagram-surface', defaultPreset.surface),
-      primaryColor: read('--diagram-primary', defaultPreset.primary),
-      primaryBorderColor: read('--diagram-border', defaultPreset.border),
-      primaryTextColor: read('--diagram-text', defaultPreset.text),
-      lineColor: read('--diagram-line', defaultPreset.line),
-      accentColor: read('--diagram-accent', defaultPreset.accent),
-      fontFamily: read('--diagram-font', 'IBM Plex Sans, ui-sans-serif, sans-serif'),
-      fontSize: Number.isFinite(fontSize) ? fontSize : 16,
-      transparent: stage?.classList.contains('is-transparent') ?? false,
-    };
-  };
+  const handleArtifactAction = createArtifactActionHandler({
+    getRenderedSvg,
+    getExportSvgMarkup,
+    getPngOptions: themeControls.getPngOptions,
+    messages,
+    announce: announceArtifactAction,
+  });
 
   const clearRenderedArtifact = () => {
     if (svgHost) {
@@ -217,7 +158,7 @@ if (workbench) {
     renderTimer = setTimeout(async () => {
       try {
         const outcome = await renderCoordinator.enqueue(source, {
-          theme: readThemeOptions(),
+          theme: themeControls.getMermaidThemeOptions(),
         });
 
         if (outcome.status === 'superseded' || requestToken !== renderRequestToken) return;
@@ -236,114 +177,6 @@ if (workbench) {
     }, 300);
   };
 
-  const applyPreset = (presetId: string) => {
-    const preset = getPreset(presetId);
-    if (!preset) return;
-
-    workbench.dataset.preset = presetId;
-    currentPreset?.replaceChildren(document.createTextNode(presetId[0].toUpperCase() + presetId.slice(1)));
-
-    const variables = toThemeVariables(preset);
-
-    Object.entries(variables).forEach(([name, value]) => workbench.style.setProperty(name, value));
-    presetButtons.forEach((button) => {
-      const selected = button.dataset.preset === presetId;
-      button.classList.toggle('is-selected', selected);
-      button.setAttribute('aria-selected', String(selected));
-    });
-    syncPresetTabStops(presetId);
-
-    workbench.querySelectorAll<HTMLInputElement>('[data-color-variable]').forEach((input) => {
-      const colorVariable = input.dataset.colorVariable as keyof typeof variables | undefined;
-      const value = colorVariable ? variables[colorVariable] : undefined;
-      if (value) {
-        input.value = value;
-        const output = workbench.querySelector<HTMLElement>(`[data-color-value="${input.id}"]`);
-        if (output) output.textContent = value;
-      }
-    });
-  };
-
-  const markCustom = () => {
-    workbench.dataset.preset = 'custom';
-    if (currentPreset) currentPreset.textContent = 'Custom';
-    presetButtons.forEach((button) => {
-      button.classList.remove('is-selected');
-      button.setAttribute('aria-selected', 'false');
-    });
-    syncPresetTabStops();
-  };
-
-  presetButtons.forEach((button) => {
-    button.addEventListener('click', () => {
-      applyPreset(button.dataset.preset ?? DEFAULT_PRESET_ID);
-      requestRender();
-    });
-  });
-
-  presetList?.addEventListener('keydown', (event) => {
-    if (!(event instanceof KeyboardEvent)) return;
-    const currentIndex = presetButtons.indexOf(document.activeElement as HTMLButtonElement);
-    if (currentIndex < 0) return;
-
-    const nextIndex = {
-      ArrowDown: Math.min(currentIndex + 1, presetButtons.length - 1),
-      ArrowRight: Math.min(currentIndex + 1, presetButtons.length - 1),
-      ArrowUp: Math.max(currentIndex - 1, 0),
-      ArrowLeft: Math.max(currentIndex - 1, 0),
-      Home: 0,
-      End: presetButtons.length - 1,
-    }[event.key as 'ArrowDown' | 'ArrowRight' | 'ArrowUp' | 'ArrowLeft' | 'Home' | 'End'];
-
-    if (nextIndex === undefined) return;
-    event.preventDefault();
-    presetButtons[nextIndex].focus();
-    presetButtons[nextIndex].click();
-  });
-
-  workbench.querySelectorAll<HTMLInputElement>('[data-color-variable]').forEach((input) => {
-    input.addEventListener('input', () => {
-      const variable = input.dataset.colorVariable;
-      if (!variable) return;
-      workbench.style.setProperty(variable, input.value);
-      const output = workbench.querySelector<HTMLElement>(`[data-color-value="${input.id}"]`);
-      if (output) output.textContent = input.value;
-      markCustom();
-      requestRender();
-    });
-  });
-
-  fontSelect?.addEventListener('change', () => {
-    workbench.style.setProperty('--diagram-font', fontSelect.value);
-    markCustom();
-    requestRender();
-  });
-
-  textSizeInput?.addEventListener('input', () => {
-    const value = `${textSizeInput.value}px`;
-    workbench.style.setProperty('--diagram-font-size', value);
-    if (textSizeOutput) textSizeOutput.value = value;
-    markCustom();
-    requestRender();
-  });
-
-  transparentToggle?.addEventListener('change', () => {
-    stage?.classList.toggle('is-transparent', transparentToggle.checked);
-    markCustom();
-    requestRender();
-  });
-
-  resetButton?.addEventListener('click', () => {
-    applyPreset(DEFAULT_PRESET_ID);
-    if (fontSelect) fontSelect.selectedIndex = 0;
-    if (textSizeInput) textSizeInput.value = '16';
-    if (textSizeOutput) textSizeOutput.value = '16px';
-    workbench.style.setProperty('--diagram-font', 'IBM Plex Sans, ui-sans-serif, sans-serif');
-    workbench.style.setProperty('--diagram-font-size', '16px');
-    if (transparentToggle) transparentToggle.checked = false;
-    stage?.classList.remove('is-transparent');
-    requestRender();
-  });
 
   const updateSourceCount = () => {
     if (sourceCount && sourceInput) sourceCount.textContent = `${sourceInput.value.length} ${messages.sourceCount}`;
@@ -365,7 +198,6 @@ if (workbench) {
     applyRenderState(detail.state, detail);
   });
 
-  syncPresetTabStops();
   updateSourceCount();
   actionButtons.forEach((button) => {
     button.addEventListener('click', () => void handleArtifactAction(button.dataset.action ?? ''));
