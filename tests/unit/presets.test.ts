@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getPreset, presetIds, presets } from '../../src/lib/theme/presets';
+import { DEFAULT_PRESET_ID, defaultPreset, getPreset, presetIds, presets, toThemeVariables } from '../../src/lib/theme/presets';
 
 describe('Mermaid Styler presets', () => {
   it('exposes the five product presets', () => {
@@ -17,5 +17,13 @@ describe('Mermaid Styler presets', () => {
 
   it('returns undefined for an unknown preset', () => {
     expect(getPreset('unknown')).toBeUndefined();
+  });
+
+  it('uses the Light preset as the product default and maps it to CSS variables', () => {
+    expect(defaultPreset).toBe(presets[DEFAULT_PRESET_ID]);
+    expect(toThemeVariables(defaultPreset)).toMatchObject({
+      '--diagram-primary': defaultPreset.primary,
+      '--diagram-surface': defaultPreset.surface,
+    });
   });
 });

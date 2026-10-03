@@ -1,7 +1,7 @@
 # Mermaid Styler — Auditoría técnica
 
-**Fecha:** 2026-09-23  
-**Estado:** baseline de auditoría; no se aplicaron correcciones durante esta revisión.  
+**Fecha:** 2026-09-24
+**Estado:** Hito 1 cerrado en `main`; Hito 2 en curso en `feature/performance-maintainability`.
 **Alcance:** escalabilidad, mantenibilidad, deuda técnica, seguridad preventiva,
 calidad de UI y operación del sitio estático.
 
@@ -46,11 +46,11 @@ herramienta de forma amplia para uso comunitario.
 | Dimensión | Nota / 4 | Hallazgo clave |
 | --- | ---: | --- |
 | Accesibilidad | 3 | Buena base de teclado, estados y foco; labels y targets táctiles por ajustar |
-| Rendimiento | 2 | El timeout no puede interrumpir trabajo síncrono pesado de Mermaid |
+| Rendimiento | 3 | PNG tiene presupuesto adaptativo; Mermaid aún puede bloquear el hilo |
 | Responsive | 3 | Flujo móvil cubierto, con algunos controles compactos |
-| Theming | 3 | Existen tokens, pero presets y valores visuales se duplican |
+| Theming | 4 | Preset, swatches, controles y variables derivan de un solo modelo tipado |
 | Integridad de implementación | 3 | Componentes coherentes; el orquestador cliente concentra demasiadas tareas |
-| **Total** | **14 / 20** | **Bueno; atender P1 antes de ampliar distribución comunitaria** |
+| **Total** | **16 / 20** | **Bueno; atender los P1 residuales antes de ampliar distribución comunitaria** |
 
 ### Lectura por eje técnico
 
@@ -78,7 +78,7 @@ Resultados:
 
 - TypeScript sin errores.
 - Build estático correcto.
-- 9 pruebas unitarias y 13 pruebas E2E en Chromium correctas.
+- 16 pruebas unitarias y 15 pruebas E2E en Chromium correctas.
 - La prueba E2E cubre flowchart, sequence, class, state, ER, Unicode,
   transparencia, exportación y veinte renders consecutivos.
 
@@ -183,58 +183,72 @@ No se identificaron bloqueantes actuales.
 
 #### AUD-005 — PNG de alta resolución tiene coste de memoria y fidelidad parcial
 
-- **Estado:** abierto.
+- **Estado:** mitigado parcialmente el 2026-09-24.
 - **Ubicación:** `src/lib/export/png.ts`.
-- **Evidencia:** el canvas se limita a 16 millones de píxeles: un buffer RGBA
-  puede ocupar como mínimo cerca de 64 MiB, sin contar imagen, blob y copias.
-  Para evitar incompatibilidades canvas, `foreignObject` se aplana a texto.
-- **Impacto:** posibles cierres o lentitud en móviles y pérdida de estilo en
-  labels HTML complejos.
-- **Acción:** presupuesto según `deviceMemory`/dimensiones, aviso cuando se
-  reduzca escala, liberación explícita del canvas y matriz de fidelidad de PNG.
+- **Evidencia:** la exportación usa un presupuesto de 4 MP en dispositivos de
+  hasta 2 GB, 8 MP cuando no hay señal fiable o hasta 4 GB, y 16 MP por encima.
+  La escala se limita correctamente contra el área base del SVG, libera URL,
+  `Image` y canvas temporal tras codificar, y avisa mediante región viva cuando
+  debe bajar resolución. Para evitar incompatibilidades canvas, `foreignObject`
+  se aplana a texto.
+- **Impacto residual:** se reduce el riesgo de picos de memoria en móviles,
+  pero persiste una pérdida de fidelidad potencial en labels HTML complejos y no
+  existe telemetría de memoria real por navegador.
+- **Acción pendiente:** ejecutar la matriz manual de fidelidad PNG por navegador
+  y dispositivo; considerar un límite configurable solo si la evidencia lo
+  justifica.
 
 #### AUD-006 — Orquestador cliente con demasiadas responsabilidades
 
-- **Estado:** abierto.
-- **Ubicación:** `src/scripts/app.ts` (505 líneas).
-- **Evidencia:** el mismo módulo gestiona render, estados, tema, exportación,
-  clipboard, zoom, pan, teclado y suscripciones DOM.
-- **Impacto:** cambios en una capacidad aumentan el riesgo de regresión en otra
-  y hacen más difícil probar la lógica fuera de E2E.
-- **Acción:** extraer controladores de preview, exportación, tema y estado de
-  render; conservar `renderMermaid()` como límite de dominio.
+- **Estado:** mitigado parcialmente el 2026-09-24.
+- **Ubicación:** `src/scripts/app.ts` (375 líneas),
+  `src/scripts/preview-controls.ts`, `src/scripts/artifact-actions.ts`.
+- **Evidencia:** zoom, pan, puntero, rueda y teclado viven en un controlador de
+  preview; SVG/PNG, clipboard y fallbacks viven en otro. El orquestador conserva
+  el ciclo de render, estados y wiring de los controles, reduciéndose 130 líneas
+  sin cambiar la frontera pública `renderMermaid()`.
+- **Impacto residual:** el theme controller y el render-state controller siguen
+  acoplados al orquestador, por lo que los cambios en esas áreas aún exigen E2E.
+- **Acción pendiente:** extraer tema y estado de render con tests directos, sin
+  sobre-abstractar el DOM.
 
 #### AUD-007 — Fuente de verdad de temas duplicada
 
-- **Estado:** abierto.
-- **Ubicación:** `src/lib/theme/presets.ts`, `src/styles/themes.css`,
-  `src/components/mermaid/StyleRail.astro`, `src/scripts/app.ts`.
-- **Evidencia:** los colores de presets y fallbacks existen en varias capas.
-- **Impacto:** el aspecto de swatches, preview y export puede divergir al añadir
-  o cambiar un preset.
-- **Acción:** definir datos de preset una vez y derivar CSS/swatch/controles
-  desde ese modelo.
+- **Estado:** resuelto el 2026-09-24.
+- **Ubicación:** `src/lib/theme/presets.ts`.
+- **Evidencia:** `PresetId`, `DEFAULT_PRESET_ID`, `defaultPreset` y
+  `toThemeVariables()` son la fuente única. El shell recibe las variables
+  iniciales desde Astro; la lista de presets, swatches, inputs y render cliente
+  las derivan del mismo modelo. Se eliminó `src/styles/themes.css` y los colores
+  de diagrama duplicados de los tokens CSS.
+- **Impacto:** añadir o modificar un preset ya no requiere sincronizar valores
+  entre CSS, Astro y JavaScript.
+- **Validación:** prueba unitaria de mapeo a variables CSS, `typecheck`, 16
+  pruebas unitarias, 15 E2E y build estático correctos.
 
 #### AUD-008 — Cobertura automática limitada a Chromium y sin presupuesto real
 
-- **Estado:** abierto.
+- **Estado:** mitigado parcialmente el 2026-09-24.
 - **Ubicación:** `.github/workflows/ci.yml`, `playwright.config.ts`,
   `tests/e2e/hardening.spec.ts`.
-- **Evidencia:** CI instala y ejecuta solo Chromium. La prueba de veinte renders
-  asegura limpieza de DOM/canvas, pero no compara heap, Long Tasks ni tamaño de
-  bundle. Exportación y sanitización carecen de pruebas unitarias directas.
+- **Evidencia:** CI mantiene la suite completa en Chromium y añade un job smoke
+  dedicado para Firefox y WebKit: render, preset y recuperación tras fuente
+  inválida. La prueba de veinte renders asegura limpieza de DOM/canvas y existe
+  una prueba unitaria del presupuesto PNG, pero no se compara heap, Long Tasks
+  ni tamaño de bundle. Sanitización aún carece de una suite unitaria directa.
 - **Impacto:** regresiones de Safari/Firefox, memoria o SVG pueden llegar a
   `main` sin una alerta confiable.
-- **Acción:** añadir matriz WebKit/Firefox en una cadencia razonable, pruebas
-  unitarias de export/sanitización y budgets de bundle y rendimiento.
+- **Acción pendiente:** añadir budgets de bundle/rendimiento y pruebas
+  unitarias directas de sanitización; ampliar el smoke si aparece una regresión
+  específica de un navegador.
 
 #### AUD-009 — Despliegue no totalmente reproducible desde Git
 
-- **Estado:** abierto.
+- **Estado:** mitigado parcialmente el 2026-09-24.
 - **Ubicación:** `package.json`, `README.md`, configuración de Dokploy.
-- **Evidencia:** no hay `.node-version`, `.nvmrc`, `engines`, Dockerfile ni
-  configuración Railpack versionada. La guía indica Node 22, aunque Astro exige
-  `>=22.12.0`; un despliegue anterior resolvió 22.11 y falló.
+- **Evidencia:** `.nvmrc`, `engines` y CI fijan Node 22.12.0, el mínimo
+  compatible con Astro y el valor documentado para Railpack. Aún no hay
+  configuración versionada de Railpack/Dokploy ni Dockerfile.
 - **Impacto:** builds futuros pueden depender de defaults cambiantes de Dokploy.
 - **Acción:** fijar una versión compatible en el repositorio y documentar o
   versionar las variables, publish directory, puerto, headers y health check.
@@ -297,8 +311,8 @@ No se identificaron bloqueantes actuales.
 
 ### Hito 2 — Rendimiento y mantenibilidad
 
-1. Resolver AUD-005 para PNG en móviles y labels complejos.
-2. Resolver AUD-006 y AUD-007 sin modificar la frontera pública
+1. Completar la matriz de fidelidad de AUD-005 para PNG en móviles y labels complejos.
+2. Resolver AUD-006 sin modificar la frontera pública
    `renderMermaid()`.
 3. Resolver AUD-008 con métricas y cobertura de navegador.
 
@@ -339,3 +353,5 @@ Después de modificar render/export, ejecutar además una prueba manual con:
 | --- | --- | --- |
 | 2026-09-23 | Baseline inicial: 0 P0, 4 P1, 6 P2, 2 P3 | Esta auditoría |
 | 2026-09-23 | Hito 1: dependencias actualizadas, límites preventivos, DOMPurify en labels HTML, CSP de documento y opt-in de source SVG | 10 unitarias, 13 E2E, build y audit sin vulnerabilidades |
+| 2026-09-24 | Hito 2 (parcial): PNG con presupuesto adaptativo y limpieza explícita; temas deduplicados en un modelo tipado | 16 unitarias, 15 E2E, build y audit sin vulnerabilidades |
+| 2026-09-24 | Hito 2 (parcial): preview y export aislados del orquestador; CI suma smoke Firefox/WebKit; Node fijado a 22.12.0 | Pendiente de CI remoto |

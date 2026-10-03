@@ -27,11 +27,6 @@
   --motion-fast: 160ms;
   --motion-base: 220ms;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --diagram-primary: #d8eceb;
-  --diagram-border: #50727c;
-  --diagram-text: #20303a;
-  --diagram-line: #50727c;
-  --diagram-accent: #69e6f7;
   --diagram-font: var(--font-ui);
   --diagram-font-size: 16px;
 }
