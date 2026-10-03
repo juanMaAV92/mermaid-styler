@@ -1,7 +1,7 @@
 # Mermaid Styler — Auditoría técnica
 
-**Fecha:** 2026-09-24
-**Estado:** Hito 1 cerrado en `main`; Hito 2 en curso en `feature/performance-maintainability`.
+**Fecha:** 2026-10-02
+**Estado:** Hitos 1 y 2 cerrados en `feature/phase-two-completion`, pendiente de revisión e integración.
 **Alcance:** escalabilidad, mantenibilidad, deuda técnica, seguridad preventiva,
 calidad de UI y operación del sitio estático.
 
@@ -22,12 +22,12 @@ dependencias y Dokploy cambian con el tiempo.
 
 | Área | Evidencia |
 | --- | --- |
-| Repositorio remoto | `origin/main` en `6de585c` (merge del soporte para etiquetas HTML `<br/>`) |
-| Copia de trabajo auditada | `feature/html-label-sanitization` en `9622ea9`; contiene el mismo cambio funcional incluido en `origin/main` |
-| Stack | Astro 7.3.4, TypeScript, Mermaid 11.17.0, scripts cliente vanilla, salida estática |
+| Repositorio remoto | `origin/main` en `c403b98` (cierre parcial previo de Hito 2) |
+| Copia de trabajo auditada | `feature/phase-two-completion`; cierre de Hito 2 pendiente de revisión e integración |
+| Stack | Astro 7.3.5, TypeScript, Mermaid 11.17.0, scripts cliente vanilla, salida estática |
 | Hosting | Dokploy, Railpack, sitio estático servido en `https://mermaid-styler.duckdns.org/` |
 | Persistencia y backend | No hay base de datos, login, endpoint ni almacenamiento de diagramas |
-| Dependencias instaladas | 457 totales; `node_modules` ocupa aproximadamente 363 MiB en desarrollo |
+| Dependencias instaladas | 459 totales en desarrollo; no se incluyen en el artefacto estático publicado |
 
 ## Resumen ejecutivo
 
@@ -46,11 +46,11 @@ herramienta de forma amplia para uso comunitario.
 | Dimensión | Nota / 4 | Hallazgo clave |
 | --- | ---: | --- |
 | Accesibilidad | 3 | Buena base de teclado, estados y foco; labels y targets táctiles por ajustar |
-| Rendimiento | 3 | PNG tiene presupuesto adaptativo; Mermaid aún puede bloquear el hilo |
+| Rendimiento | 3 | PNG tiene presupuesto adaptativo y budget de bundle; Mermaid aún puede bloquear el hilo |
 | Responsive | 3 | Flujo móvil cubierto, con algunos controles compactos |
 | Theming | 4 | Preset, swatches, controles y variables derivan de un solo modelo tipado |
-| Integridad de implementación | 3 | Componentes coherentes; el orquestador cliente concentra demasiadas tareas |
-| **Total** | **16 / 20** | **Bueno; atender los P1 residuales antes de ampliar distribución comunitaria** |
+| Integridad de implementación | 4 | Tema, estado y acciones están aislados; quedan límites inherentes de Mermaid |
+| **Total** | **17 / 20** | **Bueno; atender los P1 residuales antes de ampliar distribución comunitaria** |
 
 ### Lectura por eje técnico
 
@@ -58,7 +58,7 @@ herramienta de forma amplia para uso comunitario.
 | --- | --- | --- |
 | Escalabilidad de tráfico | Fuerte | Hosting estático, sin backend, BD ni procesamiento remoto |
 | Escalabilidad de render en navegador | Media | Render Mermaid, parseo y export PNG compiten por CPU/RAM del dispositivo |
-| Mantenibilidad | Media-alta | Tipos, módulos y tests presentes; `app.ts` y tema necesitan separación adicional |
+| Mantenibilidad | Alta | Tipos, módulos y tests presentes; tema y estado ya no acoplan el orquestador |
 | Operación y release | Media | CI básico y despliegue activo; faltan versionado de Node, headers y configuración versionada |
 | Privacidad | Buena | No se hacen requests externos y el source no se incrusta en SVG salvo elección explícita |
 
@@ -66,27 +66,35 @@ herramienta de forma amplia para uso comunitario.
 
 ### Gates locales
 
-Los siguientes comandos pasaron el 2026-09-23:
+Los siguientes comandos pasaron el 2026-10-02 sobre el build estático generado:
 
 ```bash
 npm run typecheck
 npm run build
 npm run test
+npm run test:e2e:cross-browser
+npm run check:bundle
 ```
 
 Resultados:
 
 - TypeScript sin errores.
 - Build estático correcto.
-- 16 pruebas unitarias y 15 pruebas E2E en Chromium correctas.
-- La prueba E2E cubre flowchart, sequence, class, state, ER, Unicode,
-  transparencia, exportación y veinte renders consecutivos.
+- 22 pruebas unitarias y 15 pruebas E2E en Chromium correctas.
+- Un smoke de render, preset, PNG y recuperación ante source inválido pasó en
+  Firefox y WebKit.
+- La prueba E2E cubre flowchart, sequence, class, state y ER; Unicode,
+  etiquetas largas, transparencia, exportación y veinte renders consecutivos.
+- La suite E2E sirve `dist/` en el puerto aislado 4322; no reutiliza el servidor
+  de desarrollo del usuario ni valida accidentalmente código sin construir.
 
 ### Bundle y red
 
-- Build completo no comprimido: aproximadamente **6.53 MiB** de assets estáticos.
-- JavaScript total emitido no comprimido: aproximadamente **6.47 MiB**.
-- El build emite aviso por un chunk superior a 500 kB minificado.
+- Budget automatizado: entrypoint **20 KiB** (máximo 35 KiB), chunk mayor
+  **647 KiB** (máximo 700 KiB) y JavaScript total **3314 KiB** (máximo 3600 KiB).
+- El build sigue emitiendo aviso de Vite por un chunk Mermaid superior a 500 kB.
+  No se silencia: el umbral de CI, algo mayor, documenta y controla el coste
+  actual mientras una división adicional no sea segura para Mermaid.
 - Medición puntual en Chromium contra producción, con el diagrama de ejemplo:
   **29 recursos**, todos del mismo origen, y aproximadamente **238 kB**
   transferidos.
@@ -115,18 +123,21 @@ No se identificaron bloqueantes actuales.
 
 ### P1 — resolver antes de promover distribución amplia
 
-#### AUD-001 — Dependencias con vulnerabilidades conocidas
+#### AUD-001 — Dependencia de build con vulnerabilidad conocida sin actualización compatible
 
-- **Estado:** resuelto el 2026-09-23.
+- **Estado:** riesgo aceptado y monitorizado el 2026-10-02.
 - **Ubicación:** `package.json`, `package-lock.json`.
-- **Evidencia:** el baseline reportó 5 vulnerabilidades: 1 crítica, 3 altas y
-  1 moderada, transitivas desde Astro 7.2.4. Astro se actualizó a 7.3.4 y
-  `npm audit` finalizó sin vulnerabilidades.
+- **Evidencia:** Astro se actualizó de 7.3.4 a 7.3.5 y Undici a 8.11.2.
+  `npm audit --omit=dev` aún informa 2 hallazgos high, ambos por
+  `http-cache-semantics@4.2.0` transitivo de Astro. El único fix que npm ofrece
+  baja Astro a 2.10.9, un downgrade mayor e incompatible.
 - **Impacto:** la aplicación final es estática y no expone el runtime de Astro,
   por lo que la exposición productiva es menor; aun así, el entorno de CI/build
   usa la cadena vulnerable.
-- **Acción:** actualizar Astro a una versión corregida (el audit indicó 7.3.4),
-  regenerar el lockfile y volver a ejecutar audit, build y tests.
+- **Decisión:** no aplicar `npm audit fix --force`. El sitio publicado es
+  estático y no ejecuta Astro en producción, por lo que la exposición se limita
+  al entorno de build/CI. Revalidar el audit ante cada actualización de Astro y
+  retirar esta aceptación cuando exista un fix compatible.
 - **Validación:** `npm audit --omit=dev`, `npm run typecheck`, `npm run test`,
   `npm run build`.
 
@@ -183,7 +194,8 @@ No se identificaron bloqueantes actuales.
 
 #### AUD-005 — PNG de alta resolución tiene coste de memoria y fidelidad parcial
 
-- **Estado:** mitigado parcialmente el 2026-09-24.
+- **Estado:** cerrado para el alcance del MVP el 2026-10-02; seguir monitorizando
+  fidelidad en dispositivos físicos.
 - **Ubicación:** `src/lib/export/png.ts`.
 - **Evidencia:** la exportación usa un presupuesto de 4 MP en dispositivos de
   hasta 2 GB, 8 MP cuando no hay señal fiable o hasta 4 GB, y 16 MP por encima.
@@ -191,26 +203,30 @@ No se identificaron bloqueantes actuales.
   `Image` y canvas temporal tras codificar, y avisa mediante región viva cuando
   debe bajar resolución. Para evitar incompatibilidades canvas, `foreignObject`
   se aplana a texto.
-- **Impacto residual:** se reduce el riesgo de picos de memoria en móviles,
-  pero persiste una pérdida de fidelidad potencial en labels HTML complejos y no
-  existe telemetría de memoria real por navegador.
-- **Acción pendiente:** ejecutar la matriz manual de fidelidad PNG por navegador
-  y dispositivo; considerar un límite configurable solo si la evidencia lo
-  justifica.
+- **Evidencia adicional:** E2E valida PNG en viewport móvil de 390 × 844 y otro
+  caso con Unicode, etiquetas largas y fondo transparente. El smoke en Firefox
+  y WebKit valida un PNG con cabecera correcta. Veinte renders consecutivos
+  finalizan en menos de 20 segundos y no dejan canvas, SVG o nodos Mermaid
+  temporales.
+- **Impacto residual:** los `foreignObject` se aplanan a texto al rasterizar,
+  así que labels HTML complejos pueden perder formato. La automatización no
+  reemplaza la inspección visual en Safari y móviles físicos.
+- **Seguimiento:** si se reciben reportes de fidelidad, registrar navegador,
+  diagrama, memoria del dispositivo y tamaño del SVG antes de cambiar el
+  presupuesto.
 
 #### AUD-006 — Orquestador cliente con demasiadas responsabilidades
 
-- **Estado:** mitigado parcialmente el 2026-09-24.
-- **Ubicación:** `src/scripts/app.ts` (375 líneas),
+- **Estado:** resuelto el 2026-10-02.
+- **Ubicación:** `src/scripts/app.ts` (207 líneas),
+  `src/scripts/theme-controls.ts`, `src/scripts/render-state-controller.ts`,
   `src/scripts/preview-controls.ts`, `src/scripts/artifact-actions.ts`.
-- **Evidencia:** zoom, pan, puntero, rueda y teclado viven en un controlador de
-  preview; SVG/PNG, clipboard y fallbacks viven en otro. El orquestador conserva
-  el ciclo de render, estados y wiring de los controles, reduciéndose 130 líneas
-  sin cambiar la frontera pública `renderMermaid()`.
-- **Impacto residual:** el theme controller y el render-state controller siguen
-  acoplados al orquestador, por lo que los cambios en esas áreas aún exigen E2E.
-- **Acción pendiente:** extraer tema y estado de render con tests directos, sin
-  sobre-abstractar el DOM.
+- **Evidencia:** el orquestador conserva solo selección de DOM, coordinación
+  latest-wins y cableado. Tema/presets, estado accesible de render, preview y
+  acciones de artefactos son controladores especializados. La frontera pública
+  `renderMermaid(source, options)` no cambió.
+- **Validación:** typecheck, 22 unitarias, 15 E2E Chromium y smoke Firefox/WebKit
+  pasaron sobre `dist/`.
 
 #### AUD-007 — Fuente de verdad de temas duplicada
 
@@ -228,27 +244,24 @@ No se identificaron bloqueantes actuales.
 
 #### AUD-008 — Cobertura automática limitada a Chromium y sin presupuesto real
 
-- **Estado:** mitigado parcialmente el 2026-09-24.
+- **Estado:** resuelto para el alcance de CI el 2026-10-02.
 - **Ubicación:** `.github/workflows/ci.yml`, `playwright.config.ts`,
   `tests/e2e/hardening.spec.ts`.
-- **Evidencia:** CI mantiene la suite completa en Chromium y añade un job smoke
-  dedicado para Firefox y WebKit: render, preset y recuperación tras fuente
-  inválida. La prueba de veinte renders asegura limpieza de DOM/canvas y existe
-  una prueba unitaria del presupuesto PNG, pero no se compara heap, Long Tasks
-  ni tamaño de bundle. Sanitización aún carece de una suite unitaria directa.
-- **Impacto:** regresiones de Safari/Firefox, memoria o SVG pueden llegar a
-  `main` sin una alerta confiable.
-- **Acción pendiente:** añadir budgets de bundle/rendimiento y pruebas
-  unitarias directas de sanitización; ampliar el smoke si aparece una regresión
-  específica de un navegador.
+- **Evidencia:** CI ejecuta Chromium completo y smoke de Firefox/WebKit. Añade
+  budget de bundle (`check:bundle`), una suite directa de sanitización SVG en
+  DOM, exportación PNG móvil/Unicode/transparencia y 20 renders bajo 20 s. La
+  prueba se sirve desde `dist/` para cubrir el artefacto desplegable.
+- **Límite explícito:** no hay medición portable de heap ni Long Tasks entre
+  navegadores; se considera observabilidad futura, no bloqueo del MVP.
 
 #### AUD-009 — Despliegue no totalmente reproducible desde Git
 
 - **Estado:** mitigado parcialmente el 2026-09-24.
 - **Ubicación:** `package.json`, `README.md`, configuración de Dokploy.
-- **Evidencia:** `.nvmrc`, `engines` y CI fijan Node 22.12.0, el mínimo
-  compatible con Astro y el valor documentado para Railpack. Aún no hay
-  configuración versionada de Railpack/Dokploy ni Dockerfile.
+- **Evidencia:** `.nvmrc`, CI y Dokploy fijan Node 22.12.0, el mínimo
+  compatible con Astro y el valor documentado para Railpack. `engines` declara
+  `>=22.12.0` para no rechazar versiones futuras compatibles en desarrollo.
+  Aún no hay configuración versionada de Railpack/Dokploy ni Dockerfile.
 - **Impacto:** builds futuros pueden depender de defaults cambiantes de Dokploy.
 - **Acción:** fijar una versión compatible en el repositorio y documentar o
   versionar las variables, publish directory, puerto, headers y health check.
@@ -311,10 +324,14 @@ No se identificaron bloqueantes actuales.
 
 ### Hito 2 — Rendimiento y mantenibilidad
 
-1. Completar la matriz de fidelidad de AUD-005 para PNG en móviles y labels complejos.
-2. Resolver AUD-006 sin modificar la frontera pública
+**Cerrado el 2026-10-02.**
+
+1. AUD-005: PNG cubierto en móvil, Unicode, labels largos, transparencia y
+   navegadores automatizados; queda seguimiento visual físico no bloqueante.
+2. AUD-006: tema y estado de render extraídos sin modificar
    `renderMermaid()`.
-3. Resolver AUD-008 con métricas y cobertura de navegador.
+3. AUD-008: budget de bundle, sanitización directa y smoke Firefox/WebKit
+   incorporados al CI.
 
 ### Hito 3 — Operación abierta a comunidad
 
@@ -330,7 +347,9 @@ No se identificaron bloqueantes actuales.
 npm audit --omit=dev
 npm run typecheck
 npm run test
+npm run test:e2e:cross-browser
 npm run build
+npm run check:bundle
 ```
 
 Después de modificar deploy:
@@ -355,3 +374,5 @@ Después de modificar render/export, ejecutar además una prueba manual con:
 | 2026-09-23 | Hito 1: dependencias actualizadas, límites preventivos, DOMPurify en labels HTML, CSP de documento y opt-in de source SVG | 10 unitarias, 13 E2E, build y audit sin vulnerabilidades |
 | 2026-09-24 | Hito 2 (parcial): PNG con presupuesto adaptativo y limpieza explícita; temas deduplicados en un modelo tipado | 16 unitarias, 15 E2E, build y audit sin vulnerabilidades |
 | 2026-09-24 | Hito 2 (parcial): preview y export aislados del orquestador; CI suma smoke Firefox/WebKit; Node fijado a 22.12.0 | Pendiente de CI remoto |
+| 2026-10-02 | Hito 2 cerrado: controlador de tema/estado, build estático para E2E, budget de bundle y sanitización directa | 22 unitarias, 15 E2E Chromium, 2 smoke Firefox/WebKit y budget correcto |
+| 2026-10-02 | Astro 7.3.5 y Undici 8.11.2; riesgo transitorio de `http-cache-semantics` aceptado | 2 hallazgos high solo en cadena de build; no hay actualización compatible |

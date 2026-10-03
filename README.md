@@ -116,25 +116,30 @@ npm run dev       # servidor de desarrollo
 npm run typecheck # validación de TypeScript
 npm run build     # build estático en dist/
 npm run preview   # sirve localmente el build generado
-npm run test       # unitarias + E2E en Chromium
+npm run test       # unitarias + E2E en Chromium sobre dist/
 npm run test:e2e:cross-browser # smoke E2E en Firefox y WebKit (tras instalarlos)
+npm run check:bundle # presupuesto de JavaScript generado
 ```
 
 ## QA automatizado
 
 La suite cubre renderizado de flowchart, sequence, class, state y ER; PNG con
 Unicode, etiquetas largas y transparencia; clipboard; navegación del preview; y
-20 renders consecutivos con verificación de DOM, SVG y canvas temporales.
+20 renders consecutivos con verificación de DOM, SVG y canvas temporales. Las
+E2E sirven el directorio `dist/` en un puerto aislado, por lo que no reutilizan
+ni validan accidentalmente un servidor de desarrollo local.
 
 ```bash
 npm run typecheck
 npm run test
+npm run test:e2e:cross-browser
 npm run build
+npm run check:bundle
 ```
 
-GitHub Actions valida cada cambio a `main` con Chromium y ejecuta un smoke test
-en Firefox y WebKit. También se revisaron en producción los diagramas
-principales, errores de sintaxis, exportaciones, clipboard, navegación,
+GitHub Actions valida cada cambio a `main` con Chromium, presupuesto de bundle
+y un smoke test en Firefox y WebKit. También se revisaron en producción los
+diagramas principales, errores de sintaxis, exportaciones, clipboard, navegación,
 responsive y compatibilidad manual en los dispositivos disponibles.
 
 ## Despliegue en Dokploy
@@ -177,6 +182,7 @@ La demo pública utiliza HTTPS gestionado por Let’s Encrypt.
 - [Backlog](BACKLOG.md)
 - [Plan de implementación](PLAN.md)
 - [Avisos de terceros](THIRD_PARTY_NOTICES.md)
+- [Auditoría técnica](AUDIT.md)
 
 ## Licencia
 

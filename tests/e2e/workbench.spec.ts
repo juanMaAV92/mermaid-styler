@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 
 test.describe('Mermaid Styler workbench', () => {
@@ -35,7 +36,7 @@ test.describe('Mermaid Styler workbench', () => {
   });
 
   test('copies SVG text and PNG image when clipboard permissions are available', async ({ page, context }) => {
-    await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: 'http://127.0.0.1:4321' });
+    await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: 'http://127.0.0.1:4322' });
     await page.goto('/');
 
     await page.getByRole('button', { name: 'Copy SVG' }).click();
@@ -145,5 +146,17 @@ test.describe('Mermaid Styler workbench', () => {
 
     const horizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
     expect(horizontalOverflow).toBe(false);
+  });
+
+  test('exports a valid PNG from the mobile layout', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+
+    const pngDownload = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Export PNG' }).click();
+    const pngPath = await (await pngDownload).path();
+    if (!pngPath) throw new Error('PNG download path is unavailable.');
+
+    expect((await readFile(pngPath)).subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
   });
 });

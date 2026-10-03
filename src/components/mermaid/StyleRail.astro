@@ -3,6 +3,7 @@ import ColorField from '../ui/ColorField.astro';
 import Icon from '../ui/Icon.astro';
 import PresetList from './PresetList.astro';
 import { defaultPreset, presetIds, presets as themePresets } from '../../lib/theme/presets';
+import { DEFAULT_DIAGRAM_FONT_SIZE } from '../../lib/theme/defaults';
 
 interface Props {
   labels: {
@@ -86,8 +87,8 @@ const presets = presetIds.map((id) => ({
         </select>
       </label>
       <label class="range-field" for="text-size">
-        <span>{labels.textSize}<output data-text-size>16px</output></span>
-        <input id="text-size" type="range" min="12" max="22" value="16" step="1" data-text-size-input />
+        <span>{labels.textSize}<output data-text-size>{DEFAULT_DIAGRAM_FONT_SIZE}px</output></span>
+        <input id="text-size" type="range" min="12" max="22" value={String(DEFAULT_DIAGRAM_FONT_SIZE)} step="1" data-text-size-input />
       </label>
     </fieldset>
 

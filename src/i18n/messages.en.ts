@@ -57,6 +57,7 @@ const messages = {
   presetTerminal: 'Terminal',
   presetPaper: 'Paper',
   presetArchitecture: 'Architecture',
+  customPreset: 'Custom',
   colors: 'Colors',
   typography: 'Typography',
   background: 'Background',
