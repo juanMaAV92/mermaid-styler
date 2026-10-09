@@ -1,6 +1,9 @@
 # Mermaid Styler — Implementation Plan
 
-Estado: flujo principal y exportación implementados; hardening, compatibilidad y release pendientes.
+Estado (2026-10-08): MVP desplegado; auditoría Hitos 1 y 2 integrada. Hito 3
+implementado en `feature/phase-three-operations`, pendiente de integración y
+adopción del Dockerfile en Dokploy. Los hitos de auditoría de `AUDIT.md` son
+distintos de las fases históricas de implementación de este documento.
 
 ## Resultado buscado
 
@@ -111,8 +114,9 @@ Validación: cambiar un control actualiza el preview y la matriz registra las di
 
 ### Fase 5 — Sanitización, exportación y clipboard
 
-Estado: implementación base completada para SVG, PNG y clipboard. Faltan las
-pruebas de compatibilidad y los casos extremos de hardening.
+Estado: completada para SVG, PNG y clipboard; sanitización directa y pruebas de
+Unicode, etiquetas largas, transparencia y navegador cubiertas en CI. Las
+limitaciones de rasterización HTML y dispositivos físicos están en `AUDIT.md`.
 
 Backlog: `MS-011`, `MS-012`, `MS-013`, `MS-014`, `MS-015`, `MS-045`, `MS-046`, `MS-049`.
 
@@ -155,6 +159,10 @@ Trabajo:
 Validación: no hay crecimiento sostenido de recursos, requests de source ni bloqueos ante inputs extremos.
 
 ### Fase 7 — Dokploy y release
+
+Estado: demo publicada; Dockerfile multistage, contrato HTTP/health check,
+contribuciones, seguridad y licencia implementados. Pendiente de cambiar el
+Build Type del servicio existente a Dockerfile y verificar headers en producción.
 
 Backlog: `MS-023`, `MS-025`, `MS-026`, `MS-052`.
 

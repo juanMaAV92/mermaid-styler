@@ -6,7 +6,7 @@ test.describe('Mermaid Styler workbench', () => {
     await page.goto('/');
 
     await expect(page).toHaveTitle('Mermaid Styler');
-    await expect(page.getByRole('textbox', { name: 'Paste a Mermaid definition here…' })).toHaveValue(/flowchart LR/);
+    await expect(page.getByRole('textbox', { name: 'Source' })).toHaveValue(/flowchart LR/);
     await expect(page.getByRole('listbox', { name: 'Diagram presets' }).getByRole('option')).toHaveCount(5);
     await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', 'ready', { timeout: 10_000 });
     await expect(page.locator('[data-svg-host] svg')).toBeVisible();
@@ -35,8 +35,8 @@ test.describe('Mermaid Styler workbench', () => {
     await expect((await pngDownload).suggestedFilename()).toBe('mermaid-diagram.png');
   });
 
-  test('copies SVG text and PNG image when clipboard permissions are available', async ({ page, context }) => {
-    await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: 'http://127.0.0.1:4322' });
+  test('copies SVG text and PNG image when clipboard permissions are available', async ({ page, context, baseURL }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: baseURL });
     await page.goto('/');
 
     await page.getByRole('button', { name: 'Copy SVG' }).click();
@@ -51,7 +51,7 @@ test.describe('Mermaid Styler workbench', () => {
 
   test('preserves the last valid SVG when the next source is invalid', async ({ page }) => {
     await page.goto('/');
-    const editor = page.getByRole('textbox', { name: 'Paste a Mermaid definition here…' });
+    const editor = page.getByRole('textbox', { name: 'Source' });
 
     await expect(page.locator('[data-svg-host] svg')).toBeVisible();
     await editor.fill('flowchart LR\n  A -->');
@@ -126,7 +126,7 @@ test.describe('Mermaid Styler workbench', () => {
 
   test('communicates the empty source state and keeps the preview safe', async ({ page }) => {
     await page.goto('/');
-    const editor = page.getByRole('textbox', { name: 'Paste a Mermaid definition here…' });
+    const editor = page.getByRole('textbox', { name: 'Source' });
 
     await editor.fill('');
 

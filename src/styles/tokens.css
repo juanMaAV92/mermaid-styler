@@ -23,6 +23,7 @@
   --radius-sm: 4px;
   --radius-md: 8px;
   --border-thin: 1px;
+  --control-target: 44px;
   --focus-ring: 0 0 0 2px var(--ink), 0 0 0 4px var(--signal-cyan);
   --motion-fast: 160ms;
   --motion-base: 220ms;

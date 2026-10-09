@@ -2,7 +2,18 @@
 
 Estado: render, navegación y exportación base implementados. Las prioridades
 describen el orden recomendado para el MVP, no una promesa de fechas. El
-siguiente corte es compatibilidad, hardening y release.
+siguiente corte se registra en `AUDIT.md`; las tablas siguientes son el catálogo
+de alcance original, no una lista de tareas todas pendientes.
+
+## Estado verificado — 2026-10-08
+
+- Hitos 1 y 2 de auditoría integrados mediante PR #3, #4 y #5.
+- MS-018: editor con nombre estable y controles principales de 44px implementados.
+- MS-023/MS-026: README, CONTRIBUTING y SECURITY actualizados; licencia MIT propia.
+- MS-052: Dockerfile, Nginx, health check y CI del contrato HTTP implementados.
+- MS-025: demo activa; pendiente adoptar Dockerfile en Dokploy y verificar headers públicos.
+- Pruebas de dispositivos físicos, matriz de capacidades de estilos avanzada,
+  expansión i18n/RTL y las limitaciones de render síncrono permanecen como seguimiento.
 
 ## P0 — Camino principal del MVP
 

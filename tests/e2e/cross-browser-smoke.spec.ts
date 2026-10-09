@@ -6,7 +6,7 @@ test.describe('Cross-browser smoke', () => {
     await page.goto('/');
 
     const stage = page.locator('[data-artifact-stage]');
-    const editor = page.getByRole('textbox', { name: 'Paste a Mermaid definition here…' });
+    const editor = page.getByRole('textbox', { name: 'Source' });
     await expect(stage).toHaveAttribute('data-render-state', 'ready', { timeout: 10_000 });
     await expect(page.locator('[data-svg-host] svg')).toBeVisible();
 

@@ -25,7 +25,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22.12.0
+          node-version: 22.19.0
           cache: npm
 
       - name: Install dependencies
@@ -75,7 +75,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22.12.0
+          node-version: 22.19.0
           cache: npm
 
       - name: Install dependencies
@@ -99,3 +99,34 @@ jobs:
             playwright-report/
             test-results/
           if-no-files-found: ignore
+
+  deployment:
+    name: Static container contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.19.0
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: docker build -t mermaid-styler:ci .
+      - run: docker run -d --name mermaid-styler-ci -p 127.0.0.1:8080:80 mermaid-styler:ci
+      - name: Verify HTTP contract
+        run: |
+          for attempt in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:8080/healthz; then break; fi
+            sleep 1
+          done
+          npm run check:deployment -- http://127.0.0.1:8080
+      - name: Verify render and export under HTTP CSP
+        run: npx playwright test tests/e2e/cross-browser-smoke.spec.ts --project=chromium
+        env:
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:8080
+      - name: Container logs
+        if: failure()
+        run: docker logs mermaid-styler-ci
+      - name: Cleanup test container
+        if: always()
+        run: docker rm -f mermaid-styler-ci
