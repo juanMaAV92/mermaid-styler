@@ -64,7 +64,7 @@ const waitForReady = async (page: Page, previousSvgMarkup?: string) => {
 test.describe('Mermaid Styler hardening', () => {
   test('renders the supported diagram-family matrix', async ({ page }) => {
     await page.goto('/');
-    const editor = page.getByRole('textbox', { name: 'Paste a Mermaid definition here…' });
+    const editor = page.getByRole('textbox', { name: 'Source' });
     let previousSvgMarkup = await page.locator('[data-svg-host] svg').evaluate((svg) => svg.outerHTML);
 
     for (const fixture of fixtures) {
@@ -78,7 +78,7 @@ test.describe('Mermaid Styler hardening', () => {
 
   test('renders Mermaid HTML line breaks without rejecting the generated SVG', async ({ page }) => {
     await page.goto('/');
-    const editor = page.getByRole('textbox', { name: 'Paste a Mermaid definition here…' });
+    const editor = page.getByRole('textbox', { name: 'Source' });
     const previousSvgMarkup = await page.locator('[data-svg-host] svg').evaluate((svg) => svg.outerHTML);
 
     await editor.fill(htmlLabelFlowchart);
@@ -89,7 +89,7 @@ test.describe('Mermaid Styler hardening', () => {
 
   test('exports complex Unicode, long-label and transparent diagrams', async ({ page }) => {
     await page.goto('/');
-    const editor = page.getByRole('textbox', { name: 'Paste a Mermaid definition here…' });
+    const editor = page.getByRole('textbox', { name: 'Source' });
     const longLabel = '🚀 Plataforma internacional — مرحباً بالعالم — 中文 — '.repeat(8);
     const source = `flowchart LR\n  A["${longLabel}"] --> B["日本語 ✅ ${longLabel}"]`;
     const previousSvgMarkup = await page.locator('[data-svg-host] svg').evaluate((svg) => svg.outerHTML);
@@ -133,7 +133,7 @@ test.describe('Mermaid Styler hardening', () => {
   test('keeps render resources bounded across 20 consecutive renders', async ({ page }) => {
     test.setTimeout(30_000);
     await page.goto('/');
-    const editor = page.getByRole('textbox', { name: 'Paste a Mermaid definition here…' });
+    const editor = page.getByRole('textbox', { name: 'Source' });
     let previousSvgMarkup = await page.locator('[data-svg-host] svg').evaluate((svg) => svg.outerHTML);
     const startedAt = Date.now();
 

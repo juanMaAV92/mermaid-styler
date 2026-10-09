@@ -1,7 +1,9 @@
 # Mermaid Styler — Auditoría técnica
 
-**Fecha:** 2026-10-02
-**Estado:** Hitos 1 y 2 cerrados en `feature/phase-two-completion`, pendiente de revisión e integración.
+**Fecha:** 2026-10-08
+**Estado:** Hitos 1 y 2 integrados en `main` (PR #3–#5). Hito 3 implementado en
+`feature/phase-three-operations`; falta integración y adopción/verificación del
+Dockerfile en el servicio Dokploy existente.
 **Alcance:** escalabilidad, mantenibilidad, deuda técnica, seguridad preventiva,
 calidad de UI y operación del sitio estático.
 
@@ -22,10 +24,10 @@ dependencias y Dokploy cambian con el tiempo.
 
 | Área | Evidencia |
 | --- | --- |
-| Repositorio remoto | `origin/main` en `c403b98` (cierre parcial previo de Hito 2) |
-| Copia de trabajo auditada | `feature/phase-two-completion`; cierre de Hito 2 pendiente de revisión e integración |
+| Repositorio remoto | `origin/main` en `783aaae` (merge PR #5) |
+| Copia de trabajo auditada | `feature/phase-three-operations`; operación, accesibilidad y documentación |
 | Stack | Astro 7.3.5, TypeScript, Mermaid 11.17.0, scripts cliente vanilla, salida estática |
-| Hosting | Dokploy, Railpack, sitio estático servido en `https://mermaid-styler.duckdns.org/` |
+| Hosting | Dokploy/Railpack actual; Dockerfile y Nginx versionados para la siguiente publicación |
 | Persistencia y backend | No hay base de datos, login, endpoint ni almacenamiento de diagramas |
 | Dependencias instaladas | 459 totales en desarrollo; no se incluyen en el artefacto estático publicado |
 
@@ -45,9 +47,9 @@ herramienta de forma amplia para uso comunitario.
 
 | Dimensión | Nota / 4 | Hallazgo clave |
 | --- | ---: | --- |
-| Accesibilidad | 3 | Buena base de teclado, estados y foco; labels y targets táctiles por ajustar |
+| Accesibilidad | 3 | Nombre estable y acciones 44px; lector de pantalla físico aún pendiente |
 | Rendimiento | 3 | PNG tiene presupuesto adaptativo y budget de bundle; Mermaid aún puede bloquear el hilo |
-| Responsive | 3 | Flujo móvil cubierto, con algunos controles compactos |
+| Responsive | 3 | Sin overflow a 320/390px; dispositivos físicos en seguimiento |
 | Theming | 4 | Preset, swatches, controles y variables derivan de un solo modelo tipado |
 | Integridad de implementación | 4 | Tema, estado y acciones están aislados; quedan límites inherentes de Mermaid |
 | **Total** | **17 / 20** | **Bueno; atender los P1 residuales antes de ampliar distribución comunitaria** |
@@ -59,14 +61,14 @@ herramienta de forma amplia para uso comunitario.
 | Escalabilidad de tráfico | Fuerte | Hosting estático, sin backend, BD ni procesamiento remoto |
 | Escalabilidad de render en navegador | Media | Render Mermaid, parseo y export PNG compiten por CPU/RAM del dispositivo |
 | Mantenibilidad | Alta | Tipos, módulos y tests presentes; tema y estado ya no acoplan el orquestador |
-| Operación y release | Media | CI básico y despliegue activo; faltan versionado de Node, headers y configuración versionada |
+| Operación y release | Media-alta | Docker/CI/headers validados localmente; adopción en Dokploy pendiente |
 | Privacidad | Buena | No se hacen requests externos y el source no se incrusta en SVG salvo elección explícita |
 
 ## Evidencia verificada
 
 ### Gates locales
 
-Los siguientes comandos pasaron el 2026-10-02 sobre el build estático generado:
+Los siguientes comandos pasaron el 2026-10-08 sobre el build estático generado:
 
 ```bash
 npm run typecheck
@@ -87,6 +89,9 @@ Resultados:
   etiquetas largas, transparencia, exportación y veinte renders consecutivos.
 - La suite E2E sirve `dist/` en el puerto aislado 4322; no reutiliza el servidor
   de desarrollo del usuario ni valida accidentalmente código sin construir.
+- Docker build con Node 22.19.0 pasó. El contenedor Nginx pasó contrato HTTP y
+  suite Chromium completa; health check healthy. Revisión visual desktop,
+  390px y 320px: sin desbordamiento, acciones principales de al menos 44px.
 
 ### Bundle y red
 
@@ -123,21 +128,20 @@ No se identificaron bloqueantes actuales.
 
 ### P1 — resolver antes de promover distribución amplia
 
-#### AUD-001 — Dependencia de build con vulnerabilidad conocida sin actualización compatible
+#### AUD-001 — Dependencias con vulnerabilidades conocidas
 
-- **Estado:** riesgo aceptado y monitorizado el 2026-10-02.
+- **Estado:** high corregidos el 2026-10-08; 2 low bajo seguimiento.
 - **Ubicación:** `package.json`, `package-lock.json`.
-- **Evidencia:** Astro se actualizó de 7.3.4 a 7.3.5 y Undici a 8.11.2.
-  `npm audit --omit=dev` aún informa 2 hallazgos high, ambos por
-  `http-cache-semantics@4.2.0` transitivo de Astro. El único fix que npm ofrece
-  baja Astro a 2.10.9, un downgrade mayor e incompatible.
+- **Evidencia:** `npm audit fix` compatible corrige los hallazgos high de
+  http-cache-semantics, sharp y source-map-js. Quedan 2 low: KaTeX y su efecto
+  sobre Mermaid. La solución automática ofrecida degrada Mermaid a 10.8.0.
 - **Impacto:** la aplicación final es estática y no expone el runtime de Astro,
   por lo que la exposición productiva es menor; aun así, el entorno de CI/build
   usa la cadena vulnerable.
-- **Decisión:** no aplicar `npm audit fix --force`. El sitio publicado es
-  estático y no ejecuta Astro en producción, por lo que la exposición se limita
-  al entorno de build/CI. Revalidar el audit ante cada actualización de Astro y
-  retirar esta aceptación cuando exista un fix compatible.
+- **Decisión:** no aplicar `npm audit fix --force`. KaTeX sí forma parte del
+  cliente; la sanitización y Mermaid strict son mitigaciones, no una corrección
+  del paquete. Revalidar ante actualizaciones de Mermaid. Node 22.19.0 se usa
+  en Docker/CI/.nvmrc por el mínimo requerido por Undici.
 - **Validación:** `npm audit --omit=dev`, `npm run typecheck`, `npm run test`,
   `npm run build`.
 
@@ -256,21 +260,23 @@ No se identificaron bloqueantes actuales.
 
 #### AUD-009 — Despliegue no totalmente reproducible desde Git
 
-- **Estado:** mitigado parcialmente el 2026-09-24.
+- **Estado:** implementación versionada completa; adopción en Dokploy pendiente.
 - **Ubicación:** `package.json`, `README.md`, configuración de Dokploy.
-- **Evidencia:** `.nvmrc`, CI y Dokploy fijan Node 22.12.0, el mínimo
-  compatible con Astro y el valor documentado para Railpack. `engines` declara
-  `>=22.12.0` para no rechazar versiones futuras compatibles en desarrollo.
-  Aún no hay configuración versionada de Railpack/Dokploy ni Dockerfile.
+- **Evidencia:** Dockerfile multistage con Node 22.19.0 y Nginx 1.28.0,
+  `npm ci`, health check `/healthz`, `.dockerignore` y `DEPLOYMENT.md`.
+  La imagen final publica solo archivos estáticos. CI construye y comprueba el
+  contenedor. Los tags de imagen son explícitos, sin pin por digest.
 - **Impacto:** builds futuros pueden depender de defaults cambiantes de Dokploy.
 - **Acción:** fijar una versión compatible en el repositorio y documentar o
   versionar las variables, publish directory, puerto, headers y health check.
 
 #### AUD-010 — Headers y cache sin contrato explícito
 
-- **Estado:** abierto.
-- **Ubicación:** Dokploy/Traefik, fuera del repositorio.
-- **Evidencia:** no se observó CSP ni `Cache-Control` explícito para HTML.
+- **Estado:** contrato validado en contenedor local; producción pendiente.
+- **Ubicación:** `deploy/nginx.conf`, `scripts/check-deployment.mjs`.
+- **Evidencia:** CSP HTTP, nosniff, DENY y no-referrer se aplican incluso a 404.
+  HTML revalidable y assets Astro immutable. El contrato se comprueba en CI
+  y la suite Chromium se ejecutó bajo la CSP real del contenedor.
 - **Impacto:** menor defensa ante un fallo de sanitización y diagnósticos más
   confusos después de deploys por clientes con assets en cache.
 - **Acción:** configurar HTML revalidable, assets con hash cacheables y CSP
@@ -280,20 +286,22 @@ No se identificaron bloqueantes actuales.
 
 #### AUD-011 — Labels y targets táctiles por reforzar
 
-- **Estado:** abierto.
+- **Estado:** resuelto en código el 2026-10-08.
 - **Ubicación:** `src/components/mermaid/MermaidEditor.astro`,
   `src/styles/global.css`.
-- **Evidencia:** el textarea usa placeholder como nombre accesible, no un label
-  asociado. Los controles de zoom miden 30 px y las acciones móviles 38 px.
+- **Evidencia:** textarea asociado al título Source por `aria-labelledby`.
+  El token `--control-target: 44px` aplica a exportación y zoom; presets/reset
+  móviles usan el mismo mínimo. Barra móvil permite envolver acciones.
 - **Acción:** asociar label visible o `aria-label` estable y elevar controles
   frecuentes a 44 px cuando el espacio lo permita.
 
 #### AUD-012 — Documentación y licencia de proyecto por cerrar
 
-- **Estado:** abierto.
+- **Estado:** resuelto en código el 2026-10-08.
 - **Ubicación:** `PLAN.md`, `BACKLOG.md`, raíz del repositorio.
-- **Evidencia:** el plan aún registra validaciones como pendientes y no existe
-  una licencia propia de raíz; solo se incluye la licencia de Mermaid.
+- **Evidencia:** licencia MIT propia, CONTRIBUTING, SECURITY, DEPLOYMENT,
+  README/PLAN/BACKLOG actualizados. Cada build publica textos de licencia de
+  dependencias instaladas en `/third-party-licenses.txt`. No se empaquetan fuentes.
 - **Acción:** actualizar los estados con evidencia/fecha y añadir una licencia
   para Mermaid Styler antes de solicitar contribuciones externas.
 
@@ -334,6 +342,12 @@ No se identificaron bloqueantes actuales.
    incorporados al CI.
 
 ### Hito 3 — Operación abierta a comunidad
+
+**Implementación completa el 2026-10-08; cierre operativo pendiente.**
+
+Validar en GitHub CI tras abrir el PR. Después de integrar, cambiar Build Type
+a Dockerfile en Dokploy según `DEPLOYMENT.md` y ejecutar `check:deployment`
+contra el dominio público. No marcar headers públicos como aplicados antes.
 
 1. Resolver AUD-009 y AUD-010: versión de Node, config desplegable, CSP y
    cache.
@@ -376,3 +390,5 @@ Después de modificar render/export, ejecutar además una prueba manual con:
 | 2026-09-24 | Hito 2 (parcial): preview y export aislados del orquestador; CI suma smoke Firefox/WebKit; Node fijado a 22.12.0 | Pendiente de CI remoto |
 | 2026-10-02 | Hito 2 cerrado: controlador de tema/estado, build estático para E2E, budget de bundle y sanitización directa | 22 unitarias, 15 E2E Chromium, 2 smoke Firefox/WebKit y budget correcto |
 | 2026-10-02 | Astro 7.3.5 y Undici 8.11.2; riesgo transitorio de `http-cache-semantics` aceptado | 2 hallazgos high solo en cadena de build; no hay actualización compatible |
+| 2026-10-08 | Hito 3 implementado: contenedor estático, contrato HTTP, acciones 44px, licencia y contribuciones | Validación local; pendiente CI remoto y adopción en Dokploy |
+| 2026-10-08 | Correcciones transitivas compatibles y Node 22.19.0 | Sin hallazgos high; quedan 2 low de KaTeX/Mermaid |

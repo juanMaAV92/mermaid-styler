@@ -94,7 +94,7 @@ mermaid-styler/
 
 ### Requisitos
 
-- Node.js `>=22.12.0` (requisito de Astro 7).
+- Node.js `>=22.19.0` (baseline de Astro y sus dependencias; ver `.nvmrc`).
 - npm.
 
 ### Pasos
@@ -147,16 +147,20 @@ responsive y compatibilidad manual en los dispositivos disponibles.
 Mermaid Styler se publica como sitio estático. El build produce el directorio
 `dist/`, que Dokploy sirve detrás de Traefik.
 
-Configuración utilizada en producción:
+La configuración reproducible está en `Dockerfile` y `deploy/nginx.conf`.
+Para adoptarla en Dokploy:
 
 ```bash
-npm install
-npm run build
-# Publish Directory: dist
-# Build Type: Railpack
-# RAILPACK_NODE_VERSION=22.12.0
+# Build Type: Dockerfile
+# Dockerfile: Dockerfile
+# Build Path: /
 # Domain port: 80
+# Health check: GET /healthz
 ```
+
+El despliegue existente usa Railpack hasta cambiar el Build Type en Dokploy.
+La imagen nueva incluye headers CSP, caché y Nginx; publica únicamente `dist/`.
+Consulta [DEPLOYMENT.md](DEPLOYMENT.md) para migración, validación y rollback.
 
 El repositorio `main` está conectado a Dokploy con despliegue automático por push.
 La demo pública utiliza HTTPS gestionado por Let’s Encrypt.
@@ -183,8 +187,13 @@ La demo pública utiliza HTTPS gestionado por Let’s Encrypt.
 - [Plan de implementación](PLAN.md)
 - [Avisos de terceros](THIRD_PARTY_NOTICES.md)
 - [Auditoría técnica](AUDIT.md)
+- [Despliegue reproducible](DEPLOYMENT.md)
+- [Contribuciones](CONTRIBUTING.md)
+- [Reportes de seguridad](SECURITY.md)
 
 ## Licencia
+
+El código propio de Mermaid Styler se distribuye bajo [MIT](LICENSE).
 
 Mermaid Styler utiliza [Mermaid](https://github.com/mermaid-js/mermaid), que se
 distribuye bajo licencia MIT. El texto de esa licencia está disponible en

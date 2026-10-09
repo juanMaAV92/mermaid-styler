@@ -168,7 +168,7 @@ input:focus-visible {
 .button {
   justify-content: center;
   gap: var(--space-2);
-  min-height: 36px;
+  min-height: var(--control-target);
   padding: 0 13px;
   border: var(--border-thin) solid transparent;
   border-radius: var(--radius-sm);
@@ -518,8 +518,8 @@ kbd {
 .preview-fit {
   display: inline-grid;
   place-items: center;
-  min-width: 30px;
-  min-height: 30px;
+  min-width: var(--control-target);
+  min-height: var(--control-target);
   padding: 0 var(--space-2);
   border: var(--border-thin) solid rgba(11, 15, 20, 0.16);
   border-radius: var(--radius-sm);
@@ -997,8 +997,22 @@ kbd {
   }
 
   .topbar-actions .button {
-    width: 38px;
+    width: var(--control-target);
     padding: 0;
+  }
+
+  .topbar {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .topbar-actions {
+    margin-inline-start: auto;
+  }
+
+  .preset-option,
+  .reset-button {
+    min-height: var(--control-target);
   }
 
   .workbench {

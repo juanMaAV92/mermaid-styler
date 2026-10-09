@@ -1,6 +1,8 @@
 # Mermaid Styler — Visual Design
 
-> Estado: dirección visual aprobada para especificación; implementación pendiente.
+> Estado: implementado. Revisión 2026-10-08: nombre accesible estable del editor,
+> token de acciones 44px y barra móvil adaptable; desktop, 390px y 320px sin
+> desbordamiento. Se conserva la identidad Proof Bench.
 
 ## Dirección
 
