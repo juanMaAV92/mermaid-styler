@@ -3,10 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const initialize = vi.fn();
 const reset = vi.fn();
 
+const getDiagramFromText = vi.fn(async () => ({ db: {} }));
+
 vi.mock('mermaid', () => ({
   default: {
     initialize,
-    mermaidAPI: { reset },
+    mermaidAPI: { reset, getDiagramFromText },
     parse: vi.fn(async () => ({ diagramType: 'flowchart-v2' })),
     render: vi.fn(async () => ({ svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"></svg>', diagramType: 'flowchart-v2' })),
   },
@@ -64,6 +66,27 @@ describe('renderMermaid label sanitizing (AUD-013)', () => {
     for (const [config] of initialize.mock.calls as [{ secure: string[] }][]) {
       expect(config.secure).toContain('dompurifyConfig');
     }
+  });
+});
+
+describe('renderMermaid image-shape guard (AUD-013)', () => {
+  it('AUD-013: rejects a parsed vertex with img before rendering, whatever the YAML spelling', async () => {
+    const mermaid = (await import('mermaid')).default;
+    vi.mocked(mermaid.render).mockClear();
+    getDiagramFromText.mockResolvedValueOnce({
+      db: { getVertices: () => new Map([['A', { id: 'A', img: 'https://evil.example/a.png' }]]) },
+    } as never);
+    const { renderMermaid } = await import('../../src/lib/mermaid/render-mermaid');
+    await expect(renderMermaid('flowchart LR\n  A@{ label: &k img, *k : "x.png" } --> B', { theme }))
+      .rejects.toMatchObject({ code: 'UNSAFE_SOURCE' });
+    expect(mermaid.render).not.toHaveBeenCalled();
+  });
+
+  it('AUD-013: skips the extra parse when the source has no @{…} metadata', async () => {
+    getDiagramFromText.mockClear();
+    const { renderMermaid } = await import('../../src/lib/mermaid/render-mermaid');
+    await renderMermaid('flowchart LR\n  A --> B', { theme });
+    expect(getDiagramFromText).not.toHaveBeenCalled();
   });
 });
 

@@ -113,6 +113,20 @@ const initializeMermaid = (config: MermaidConfig) => {
   }
 };
 
+/** True when the parsed flowchart has an image-shape vertex (`@{ img: … }`), which Mermaid loads while rendering. */
+const hasImageShapeVertex = async (source: string): Promise<boolean> => {
+  if (!/@\s*\{/.test(source)) return false;
+  let diagram: { db: unknown };
+  try {
+    diagram = await mermaid.mermaidAPI.getDiagramFromText(source);
+  } catch (error) {
+    throw new MermaidRenderError('PARSE_ERROR', 'Mermaid could not parse this source.', String(error));
+  }
+  const vertices = (diagram.db as { getVertices?: () => unknown }).getVertices?.();
+  const values = vertices instanceof Map ? [...vertices.values()] : Object.values(vertices ?? {});
+  return values.some((vertex) => Boolean((vertex as { img?: unknown } | undefined)?.img));
+};
+
 export const renderMermaid = async (
   source: string,
   options: RenderMermaidOptions,
@@ -161,6 +175,12 @@ export const renderMermaid = async (
     } catch (error) {
       if (error instanceof MermaidRenderError) throw error;
       throw new MermaidRenderError('PARSE_ERROR', 'Mermaid could not parse this source.', String(error));
+    }
+
+    // AUD-013 defence in depth: validateSource rejects `img` keys lexically, but YAML can still spell one (e.g. an
+    // alias `{ label: &k img, *k : url }`). Inspect what Mermaid actually parsed before `render` loads any image.
+    if (await withTimeout(hasImageShapeVertex(validatedSource), timeoutMs)) {
+      throw new MermaidRenderError('UNSAFE_SOURCE', 'Node metadata cannot load images.');
     }
 
     // Mermaid only re-derives dependent colors (e.g. node fill from primaryColor) when a directive also sets

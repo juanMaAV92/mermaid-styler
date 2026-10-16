@@ -9,6 +9,9 @@ const messages: ErrorMessages = {
   timeoutStateHint: 'Simplify the source and try again.',
   errorFallback: 'Mermaid could not render this source.',
   syntaxErrorOnLine: 'Syntax error on line {line}',
+  imageMetadataBlocked: 'Image nodes are blocked',
+  imageMetadataOnLine: 'Image node blocked on line {line}',
+  imageMetadataHint: 'Remove the img key.',
 };
 
 describe('formatMessage', () => {
@@ -48,5 +51,14 @@ describe('formatRenderError', () => {
   it('falls back for parse errors without line and for unknown errors', () => {
     expect(formatRenderError(new MermaidRenderError('PARSE_ERROR', 'm', 'boom'), messages)).toEqual({ title: 'Invalid Mermaid', detail: 'boom' });
     expect(formatRenderError(new Error('x'), messages).detail).toBe(messages.errorFallback);
+  });
+});
+
+describe('formatRenderError image metadata (AUD-013)', () => {
+  it('AUD-013: UNSAFE_SOURCE uses the messages copy and keeps the line for go-to-line', () => {
+    const withLine = formatRenderError(new MermaidRenderError('UNSAFE_SOURCE', 'internal', 'line 3'), messages);
+    expect(withLine).toEqual({ title: 'Image node blocked on line 3', detail: 'Remove the img key.', line: 3 });
+    const withoutLine = formatRenderError(new MermaidRenderError('UNSAFE_SOURCE', 'internal'), messages);
+    expect(withoutLine).toEqual({ title: 'Image nodes are blocked', detail: 'Remove the img key.' });
   });
 });

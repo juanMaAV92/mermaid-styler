@@ -7,6 +7,9 @@ export type ErrorMessages = {
   timeoutStateHint: string;
   errorFallback: string;
   syntaxErrorOnLine: string;
+  imageMetadataBlocked: string;
+  imageMetadataOnLine: string;
+  imageMetadataHint: string;
 };
 
 export type FormattedRenderError = { title: string; detail: string; line?: number };
@@ -20,6 +23,15 @@ export const formatRenderError = (error: unknown, messages: ErrorMessages, sourc
 
   if (error.code === 'RENDER_TIMEOUT') {
     return { title: messages.stateTimeout, detail: messages.timeoutStateHint };
+  }
+
+  // AUD-013: `@{ img: … }` is rejected before Mermaid runs; details carry `line N` for go-to-line when known.
+  if (error.code === 'UNSAFE_SOURCE') {
+    const match = /line (\d+)/i.exec(error.details ?? '');
+    const line = match ? Number(match[1]) : undefined;
+    return line
+      ? { title: formatMessage(messages.imageMetadataOnLine, { line }), detail: messages.imageMetadataHint, line }
+      : { title: messages.imageMetadataBlocked, detail: messages.imageMetadataHint };
   }
 
   if (error.code === 'PARSE_ERROR' || error.code === 'RENDER_ERROR') {

@@ -254,6 +254,8 @@ test.describe('Mermaid Styler hardening', () => {
     { name: 'relative <img>', source: 'flowchart LR\n  A["<img src=\'probe-label.png\'> hi"] --> B' },
     { name: 'style url()', source: 'flowchart LR\n  A["<span style=\'background:url(https://evil.example/span.png)\'>x</span>"] --> B' },
     { name: 'external <input type=image>', source: 'flowchart LR\n  A["<input type=\'image\' src=\'https://evil.example/in.png\'> hi"] --> B' },
+    // Not a fetch today (no iconify loader is registered); kept as a regression guard for @{…} metadata.
+    { name: 'icon-shape metadata', source: 'flowchart LR\n  A@{ icon: "fa:user", form: "square", label: "x" } --> B' },
     { name: 'video poster', source: 'flowchart LR\n  A["<video poster=\'https://evil.example/poster.png\'></video> hi"] --> B' },
     {
       // Mermaid's sanitizeDirective already deletes the nested FORBID_TAGS key, so this case passes even without
@@ -273,6 +275,26 @@ test.describe('Mermaid Styler hardening', () => {
       const markup = await svgMarkup(page);
       expect(markup).not.toContain('evil.example');
       expect(markup).not.toContain('probe-label');
+    });
+  }
+
+  for (const shape of [
+    { name: 'external', source: 'flowchart LR\n  A@{ img: "https://evil.example/shape.png", label: "x", pos: "t", w: 60, h: 60 } --> B' },
+    { name: 'relative', source: 'flowchart LR\n  A@{ img: "probe-shape.png", label: "x" } --> B' },
+    { name: 'quoted-key', source: 'flowchart LR\n  A@{ "img" : \'https://evil.example/shape3.png\' } --> B' },
+    { name: 'escaped-key', source: 'flowchart LR\n  A@{ "\\x69mg": "https://evil.example/shape4.png" } --> B' },
+    { name: 'yaml-alias-key', source: 'flowchart LR\n  A@{ label: &k img, *k : "https://evil.example/shape5.png" } --> B' },
+  ]) {
+    test(`AUD-013: image-shape node metadata (${shape.name}) triggers no request`, async ({ page }) => {
+      await page.goto('/');
+      await waitForReady(page);
+      const requests = recordRequests(page);
+      await page.locator('[data-source-input]').fill(shape.source);
+      await page.locator('[data-source-input]').blur();
+      await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', 'error', { timeout: 10_000 });
+      await page.waitForTimeout(500);
+      expect(requests).toEqual([]);
+      await expect(page.locator('[data-source-feedback]')).toContainText('img');
     });
   }
 

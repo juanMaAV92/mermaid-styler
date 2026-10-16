@@ -22,6 +22,7 @@ export type RenderErrorCode =
   | 'EMPTY_SOURCE'
   | 'SOURCE_TOO_LARGE'
   | 'SOURCE_TOO_COMPLEX'
+  | 'UNSAFE_SOURCE'
   | 'PARSE_ERROR'
   | 'RENDER_TIMEOUT'
   | 'RENDER_ERROR'
