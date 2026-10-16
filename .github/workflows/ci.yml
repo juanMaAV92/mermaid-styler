@@ -37,17 +37,17 @@ jobs:
       - name: Unit tests
         run: npm run test:unit
 
-      - name: Install Playwright browser
-        run: npx playwright install --with-deps chromium
-
-      - name: End-to-end tests
-        run: npm run test:e2e
-
       - name: Build static site
         run: npm run build
 
       - name: Enforce bundle budget
         run: npm run check:bundle
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: End-to-end tests
+        run: npm run test:e2e:only
 
       - name: Upload Playwright report
         if: failure()

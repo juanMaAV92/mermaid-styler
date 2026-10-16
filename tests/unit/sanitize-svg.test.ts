@@ -1,5 +1,3 @@
-// @vitest-environment happy-dom
-
 import { describe, expect, it } from 'vitest';
 import { hasExternalCssUrl, normalizeMermaidLineBreaks, sanitizeSvg } from '../../src/lib/mermaid/sanitize-svg';
 
