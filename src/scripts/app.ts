@@ -1,4 +1,5 @@
 import messages from '../i18n/messages.en';
+import { formatRenderError } from '../lib/mermaid/format-error';
 import { MermaidRenderError } from '../lib/mermaid/types';
 import type { MermaidRenderResult, RenderMermaidOptions } from '../lib/mermaid/types';
 import { LatestWinsRenderCoordinator } from '../lib/mermaid/render-coordinator';
@@ -45,6 +46,7 @@ if (workbench) {
   const sourceFeedback = workbench.querySelector<HTMLElement>('[data-source-feedback]');
   const sourceFeedbackTitle = workbench.querySelector<HTMLElement>('[data-source-feedback-title]');
   const sourceFeedbackBody = workbench.querySelector<HTMLElement>('[data-source-feedback-body]');
+  const goToLineButton = workbench.querySelector<HTMLButtonElement>('[data-go-to-line]');
   const stateBadge = workbench.querySelector<HTMLElement>('[data-state-badge]');
   const liveStatus = workbench.querySelector<HTMLElement>('[data-live-status]');
   const actionButtons = [...workbench.querySelectorAll<HTMLButtonElement>('[data-action]')];
@@ -91,6 +93,7 @@ if (workbench) {
     sourceFeedback,
     sourceFeedbackTitle,
     sourceFeedbackBody,
+    goToLineButton,
     stateBadge,
     liveStatus,
     actionButtons,
@@ -129,13 +132,25 @@ if (workbench) {
     if (scaffoldPreview) scaffoldPreview.hidden = false;
   };
 
+  goToLineButton?.addEventListener('click', () => {
+    const line = Number(goToLineButton.dataset.line);
+    if (!sourceInput || !Number.isInteger(line) || line < 1) return;
+    const lines = sourceInput.value.split('\n');
+    const start = lines.slice(0, Math.min(line, lines.length) - 1).reduce((sum, text) => sum + text.length + 1, 0);
+    sourceInput.focus();
+    sourceInput.setSelectionRange(start, start);
+  });
+
   const handleRenderError = (error: unknown) => {
     const isTimeout = error instanceof MermaidRenderError && error.code === 'RENDER_TIMEOUT';
     const hasArtifact = workbench.dataset.hasArtifact === 'true';
+    const formatted = formatRenderError(error, messages, (sourceInput?.value ?? '').split('\n').length);
     applyRenderState(isTimeout ? 'timeout' : 'error', {
       hasArtifact,
       message: hasArtifact ? messages.lastValidPreview : undefined,
-      detail: error instanceof MermaidRenderError ? error.message : messages.errorFallback,
+      title: formatted.title,
+      detail: formatted.detail,
+      line: formatted.line,
     });
   };
 

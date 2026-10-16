@@ -159,4 +159,16 @@ test.describe('Mermaid Styler workbench', () => {
 
     expect((await readFile(pngPath)).subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
   });
+
+  test('AUD-018: parse error shows line and jumps to it', async ({ page }) => {
+    await page.goto('/');
+    const editor = page.getByRole('textbox', { name: 'Source' });
+    await editor.fill('flowchart LR\n A --> B[');
+
+    await expect(page.locator('[data-source-feedback]')).toContainText(/line 2/i, { timeout: 10_000 });
+    await page.getByRole('button', { name: 'Go to line 2' }).click();
+
+    const selectionStart = await editor.evaluate((el) => (el as HTMLTextAreaElement).selectionStart);
+    expect(selectionStart).toBeGreaterThanOrEqual('flowchart LR\n'.length);
+  });
 });

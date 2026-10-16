@@ -1,8 +1,11 @@
+import { formatMessage } from '../i18n/format';
 import type { RenderState } from '../lib/ui/render-state';
 
 export type RenderStateOptions = {
   message?: string;
   detail?: string;
+  title?: string;
+  line?: number;
   hasArtifact?: boolean;
 };
 
@@ -19,6 +22,7 @@ type RenderStateMessages = {
   timeoutStateHint: string;
   statusAnnounce: string;
   errorFallback: string;
+  goToLine: string;
 };
 
 type RenderStateControllerOptions = {
@@ -31,6 +35,7 @@ type RenderStateControllerOptions = {
   sourceFeedback?: HTMLElement | null;
   sourceFeedbackTitle?: HTMLElement | null;
   sourceFeedbackBody?: HTMLElement | null;
+  goToLineButton?: HTMLButtonElement | null;
   stateBadge?: HTMLElement | null;
   liveStatus?: HTMLElement | null;
   actionButtons: HTMLButtonElement[];
@@ -47,6 +52,7 @@ export const createRenderStateController = ({
   sourceFeedback,
   sourceFeedbackTitle,
   sourceFeedbackBody,
+  goToLineButton,
   stateBadge,
   liveStatus,
   actionButtons,
@@ -83,9 +89,20 @@ export const createRenderStateController = ({
     if (liveStatus) liveStatus.textContent = `${messages.statusAnnounce}: ${copy.label}. ${options.message ?? copy.caption}`;
 
     if (sourceFeedback) sourceFeedback.hidden = !isError;
-    if (sourceFeedbackTitle) sourceFeedbackTitle.textContent = copy.label;
+    if (sourceFeedbackTitle) sourceFeedbackTitle.textContent = options.title ?? copy.label;
     if (sourceFeedbackBody) {
       sourceFeedbackBody.textContent = options.detail ?? (state === 'timeout' ? messages.timeoutStateHint : messages.errorFallback);
+    }
+
+    if (goToLineButton) {
+      const line = isError ? options.line : undefined;
+      goToLineButton.hidden = line === undefined;
+      if (line !== undefined) {
+        goToLineButton.textContent = formatMessage(messages.goToLine, { line });
+        goToLineButton.dataset.line = String(line);
+      } else {
+        delete goToLineButton.dataset.line;
+      }
     }
 
     const canUseArtifact = hasArtifact && state !== 'empty' && state !== 'rendering';

@@ -327,8 +327,34 @@ input:focus-visible {
   background: rgba(255, 107, 87, 0.08);
   font-size: 11px;
   line-height: 1.45;
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
 }
 
+.source-feedback__body {
+  margin: 0;
+  max-height: calc(11px * 1.45 * 3);
+  overflow: auto;
+  font-family: var(--font-code);
+  font-size: 11px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.source-feedback__action {
+  justify-self: start;
+  min-height: var(--control-target);
+  padding: 0 var(--space-4);
+  border: var(--border-thin) solid currentColor;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.source-feedback__action[hidden],
 .source-feedback[hidden] {
   display: none;
 }

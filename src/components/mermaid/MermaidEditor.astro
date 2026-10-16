@@ -10,6 +10,7 @@ interface Props {
     renderLater: string;
     errorDetails: string;
     errorFallback: string;
+    goToLine: string;
   };
 }
 
@@ -40,7 +41,8 @@ const { source, sourceHint, placeholder, labels } = Astro.props;
   </div>
   <div class="source-feedback" data-source-feedback hidden role="alert">
     <strong data-source-feedback-title>{labels.errorDetails}</strong>
-    <span data-source-feedback-body>{labels.errorFallback}</span>
+    <pre class="source-feedback__body" data-source-feedback-body>{labels.errorFallback}</pre>
+    <button type="button" class="source-feedback__action" data-go-to-line hidden></button>
   </div>
   <div class="panel-foot">
     <span id="source-hint">{sourceHint}</span>

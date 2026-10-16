@@ -30,6 +30,8 @@ const messages = {
   stateTimeout: 'Timed out',
   statusAnnounce: 'Preview state',
   errorDetails: 'Source feedback',
+  syntaxErrorOnLine: 'Syntax error on line {line}',
+  goToLine: 'Go to line {line}',
   errorFallback: 'Mermaid could not render this source.',
   sourceAlternative: 'Mermaid source is available in the editor as a text alternative.',
   previewNavigation: 'Interactive diagram preview',
