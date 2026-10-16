@@ -15,7 +15,7 @@
 - Sin backend, sin persistencia (ni `localStorage` ni `sessionStorage` para el source), sin telemetría ni requests externos.
 - `renderMermaid(source, options): Promise<MermaidRenderResult>` mantiene su firma; solo se **añaden** campos al resultado.
 - Límite de aristas único: `MAX_EDGES = 500` (igual al `maxEdges` por defecto de Mermaid), exportado desde `src/lib/mermaid/validation.ts`.
-- Mermaid se inicializa siempre con la lista `secure` completa y explícita (los arrays de config pueden reemplazarse, no concatenarse): `['secure', 'securityLevel', 'startOnLoad', 'maxTextSize', 'suppressErrorRendering', 'maxEdges', 'themeCSS']`. La exporta `src/lib/mermaid/render-mermaid.ts` como `MERMAID_SECURE_KEYS`.
+- Mermaid se inicializa siempre con la lista `secure` completa y explícita (los arrays de config pueden reemplazarse, no concatenarse): `['secure', 'securityLevel', 'startOnLoad', 'maxTextSize', 'suppressErrorRendering', 'maxEdges', 'themeCSS', 'fontFamily', 'altFontFamily']`. La exporta `src/lib/mermaid/render-mermaid.ts` como `MERMAID_SECURE_KEYS`.
 - Ningún `innerHTML =` nuevo en `src/`; los SVG se insertan con `importNode`/`replaceChildren`.
 - Todo copy nuevo vive en `src/i18n/messages.en.ts`; ningún texto visible hardcodeado en `.astro`/`.ts`.
 - Objetivos táctiles ≥ 44px (`--control-target`); tipografía de UI ≥ 11px.
