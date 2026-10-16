@@ -426,4 +426,21 @@ test.describe('Mermaid Styler workbench', () => {
     await expect.poll(() => svg.evaluate((element) => element.id), { timeout: 10_000 }).not.toBe(before);
     await expect(zoom).toHaveText(zoomed ?? '');
   });
+
+  test('AUD-021: large-diagram hint stays hidden for the default sample on mobile', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+    await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', 'ready', { timeout: 10_000 });
+    await expect.poll(() => page.locator('[data-preview-layer]').evaluate((element) => Number(element.style.getPropertyValue('--preview-scale'))))
+      .toBeLessThan(0.5);
+    await expect(page.locator('[data-preview-large-hint]')).toBeHidden();
+  });
+
+  test('AUD-021: large-diagram hint shows for a long chain after fit', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/');
+    await renderSource(page, chain('LR', 40));
+    await expect(page.locator('[data-preview-large-hint]')).toBeVisible();
+    await expect(page.locator('[data-preview-large-hint]')).toHaveCSS('font-size', '11px');
+  });
 });

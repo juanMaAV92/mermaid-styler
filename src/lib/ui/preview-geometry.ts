@@ -10,6 +10,10 @@ export const MAX_SCALE = 2;
  * authors can still inspect small labels in a diagram that Fit shrank, without Fit itself blowing up tiny diagrams.
  */
 export const MANUAL_MAX_SCALE = 4;
+/** Effective text size (px) below which a diagram counts as hard to read. */
+export const MIN_READABLE_FONT_PX = 8;
+/** Reference desktop viewport: a diagram is "large" only if it is unreadable even when fitted into this. */
+export const LARGE_DIAGRAM_REFERENCE_VIEWPORT: Size = { width: 720, height: 480 };
 /** Relative change in intrinsic width or height above which a re-render refits the preview. */
 export const SIGNIFICANT_SIZE_CHANGE = 0.2;
 export const PAN_MARGIN = 48;
@@ -71,4 +75,18 @@ export function hasSignificantSizeChange(previous: Size | undefined, next: Size,
   if (!previous || !isPositiveFinite(previous.width) || !isPositiveFinite(previous.height)) return true;
   return Math.abs(next.width - previous.width) / previous.width > threshold
     || Math.abs(next.height - previous.height) / previous.height > threshold;
+}
+
+/**
+ * True when the text is unreadable at the current scale AND would still be unreadable fitted into a reference
+ * desktop viewport (at least 720×480). A small diagram squeezed onto a phone, or manually zoomed out, is not "large".
+ */
+export function isLargeDiagram(content: Size, viewport: Size, scale: number, fontSize: number): boolean {
+  if (!isPositiveFinite(fontSize) || !isPositiveFinite(scale)) return false;
+  if (fontSize * scale >= MIN_READABLE_FONT_PX) return false;
+  const reference = {
+    width: Math.max(viewport.width, LARGE_DIAGRAM_REFERENCE_VIEWPORT.width),
+    height: Math.max(viewport.height, LARGE_DIAGRAM_REFERENCE_VIEWPORT.height),
+  };
+  return fontSize * computeFitScale(content, reference) < MIN_READABLE_FONT_PX;
 }

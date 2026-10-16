@@ -6,6 +6,7 @@ import {
   computeFitScale,
   computePanLimit,
   hasSignificantSizeChange,
+  isLargeDiagram,
   parseSvgIntrinsicSize,
   wheelZoomFactor,
   zoomAt,
@@ -119,5 +120,25 @@ describe('zoomAt', () => {
     expect(zoomAt({ x: 5, y: 6 }, 1, Number.NaN, pan)).toEqual(pan);
     expect(zoomAt({ x: 5, y: 6 }, Number.POSITIVE_INFINITY, 1, pan)).toEqual(pan);
     expect(zoomAt({ x: 5, y: 6 }, 1, 0, pan)).toEqual(pan);
+  });
+});
+
+describe('isLargeDiagram', () => {
+  it('is false for the default sample squeezed into a phone viewport', () => {
+    expect(isLargeDiagram({ width: 615, height: 170 }, { width: 284, height: 300 }, 0.41, 16)).toBe(false);
+  });
+  it('is true for a 40-node LR chain at fit', () => {
+    const content = { width: 40 * 160, height: 120 };
+    const desktop = { width: 553, height: 478 };
+    expect(isLargeDiagram(content, desktop, computeFitScale(content, desktop), 16)).toBe(true);
+  });
+  it('is false whenever the current text is at least 8px', () => {
+    const content = { width: 40 * 160, height: 120 };
+    expect(isLargeDiagram(content, { width: 553, height: 478 }, 0.5, 16)).toBe(false);
+    expect(isLargeDiagram(content, { width: 553, height: 478 }, 1, 8)).toBe(false);
+  });
+  it('is false for invalid font sizes', () => {
+    expect(isLargeDiagram({ width: 6400, height: 120 }, { width: 553, height: 478 }, 0.1, 0)).toBe(false);
+    expect(isLargeDiagram({ width: 6400, height: 120 }, { width: 553, height: 478 }, 0.1, Number.NaN)).toBe(false);
   });
 });

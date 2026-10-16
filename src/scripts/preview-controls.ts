@@ -3,6 +3,7 @@ import {
   clampScale,
   computeFitScale,
   computePanLimit,
+  isLargeDiagram,
   parseSvgIntrinsicSize,
   wheelZoomFactor,
   zoomAt,
@@ -29,8 +30,6 @@ export type PreviewControls = {
 const ZOOM_STEP = 1.25;
 const PAN_STEP = 32;
 const PAN_STEP_LARGE = 80;
-/** Below this effective text size (theme font size × scale) after Fit, suggest zooming in or exporting. */
-const MIN_READABLE_FONT_PX = 8;
 const LINE_HEIGHT_PX = 16;
 
 export const readSvgIntrinsicSize = (svg: SVGSVGElement): Size | undefined => parseSvgIntrinsicSize({
@@ -86,9 +85,8 @@ export const initPreviewControls = ({
 
   const updateLargeDiagramHint = () => {
     if (!largeDiagramHint) return;
-    const fontSize = getFontSize?.() ?? 0;
-    const hasContent = Boolean(contentSize());
-    largeDiagramHint.hidden = !(hasContent && fontSize > 0 && fontSize * scale < MIN_READABLE_FONT_PX);
+    const content = contentSize();
+    largeDiagramHint.hidden = !(content && isLargeDiagram(content, viewportSize(), scale, getFontSize?.() ?? 0));
   };
 
   const applyTransform = () => {
@@ -220,6 +218,14 @@ export const initPreviewControls = ({
   viewport?.addEventListener('pointerup', endPointer);
   viewport?.addEventListener('pointercancel', endPointer);
   viewport?.addEventListener('lostpointercapture', endPointer);
+
+  // touch-action: pan-y lets the browser start a page scroll mid-pinch (then pointercancel). Claim multi-touch
+  // gestures; a single finger is never prevented, so one-finger page scroll stays native.
+  const claimMultiTouch = (event: TouchEvent) => {
+    if (event.touches.length >= 2) event.preventDefault();
+  };
+  viewport?.addEventListener('touchstart', claimMultiTouch, { passive: false });
+  viewport?.addEventListener('touchmove', claimMultiTouch, { passive: false });
 
   viewport?.addEventListener('wheel', (event) => {
     // Without a modifier the wheel belongs to the page. ctrlKey also covers trackpad pinch on macOS/Windows.
