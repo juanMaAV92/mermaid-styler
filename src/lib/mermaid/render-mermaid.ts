@@ -60,8 +60,12 @@ export const MERMAID_SECURE_KEYS = [
  * tag and attribute that can load a resource; text formatting (`<b>`, `<i>`, `<br>`, markdown) is unaffected.
  */
 export const LABEL_DOMPURIFY_CONFIG = {
-  FORBID_TAGS: ['style', 'img', 'image', 'svg', 'math', 'iframe', 'object', 'embed', 'link', 'video', 'audio', 'source', 'picture'],
-  FORBID_ATTR: ['style', 'srcset', 'background'],
+  FORBID_TAGS: [
+    'style', 'img', 'image', 'svg', 'math', 'iframe', 'object', 'embed', 'link', 'video', 'audio', 'source', 'picture',
+    // `<input type="image" src>` also fetches during layout; no allowed label tag needs `src` or `poster`.
+    'input',
+  ],
+  FORBID_ATTR: ['style', 'srcset', 'background', 'src', 'poster'],
 } as const satisfies NonNullable<MermaidConfig['dompurifyConfig']>;
 
 /** D1: keys added to `secure` unless the author opts into the source theme. `themeCSS` is always in the base list. */

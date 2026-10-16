@@ -253,7 +253,11 @@ test.describe('Mermaid Styler hardening', () => {
     { name: 'external <img>', source: 'flowchart LR\n  A["<img src=\'https://evil.example/label.png\'> hi"] --> B' },
     { name: 'relative <img>', source: 'flowchart LR\n  A["<img src=\'probe-label.png\'> hi"] --> B' },
     { name: 'style url()', source: 'flowchart LR\n  A["<span style=\'background:url(https://evil.example/span.png)\'>x</span>"] --> B' },
+    { name: 'external <input type=image>', source: 'flowchart LR\n  A["<input type=\'image\' src=\'https://evil.example/in.png\'> hi"] --> B' },
+    { name: 'video poster', source: 'flowchart LR\n  A["<video poster=\'https://evil.example/poster.png\'></video> hi"] --> B' },
     {
+      // Mermaid's sanitizeDirective already deletes the nested FORBID_TAGS key, so this case passes even without
+      // 'dompurifyConfig' in MERMAID_SECURE_KEYS; the unit test is the guard for the secure key itself.
       name: 'external <img> and a dompurifyConfig directive',
       source: '%%{init: {"dompurifyConfig": {"FORBID_TAGS": []}}}%%\nflowchart LR\n  A["<img src=\'https://evil.example/label.png\'> hi"] --> B',
     },
@@ -282,6 +286,19 @@ test.describe('Mermaid Styler hardening', () => {
     await expect(labels.first().locator('br')).toHaveCount(1);
     await expect(labels.nth(1).locator('strong')).toHaveText('md');
     await expect(labels.nth(1).locator('em')).toHaveText('em');
+  });
+
+  test('AUD-013: label sanitizing keeps Mermaid style and classDef text colours', async ({ page }) => {
+    await page.goto('/');
+    await waitForReady(page);
+    await fillSourceAndWait(
+      page,
+      'flowchart LR\n  A[Alpha] --> B[Beta]\n  style A color:#ff0000\n  classDef c color:#00ff00\n  class B c',
+    );
+    const labelColor = (id: string) => page.locator(`[data-svg-host] svg g.node[id*="-${id}-"] .nodeLabel`).first()
+      .evaluate((label) => getComputedStyle(label).color);
+    expect(await labelColor('A')).toBe('rgb(255, 0, 0)');
+    expect(await labelColor('B')).toBe('rgb(0, 255, 0)');
   });
 
   test('AUD-016: 501 edges are rejected with the 500 limit and no long task', async ({ page }) => {

@@ -50,9 +50,10 @@ describe('renderMermaid label sanitizing (AUD-013)', () => {
     await renderMermaid('flowchart LR\n  A --> B', { theme });
     const config = initialize.mock.calls[0][0] as { dompurifyConfig: { FORBID_TAGS: string[]; FORBID_ATTR: string[] } };
     expect(config.dompurifyConfig.FORBID_TAGS).toEqual(expect.arrayContaining(
-      ['style', 'img', 'image', 'svg', 'math', 'iframe', 'object', 'embed', 'link', 'video', 'audio', 'source', 'picture'],
+      ['style', 'img', 'image', 'svg', 'math', 'iframe', 'object', 'embed', 'link', 'video', 'audio', 'source', 'picture',
+        'input'],
     ));
-    expect(config.dompurifyConfig.FORBID_ATTR).toEqual(expect.arrayContaining(['style', 'srcset', 'background']));
+    expect(config.dompurifyConfig.FORBID_ATTR).toEqual(expect.arrayContaining(['style', 'srcset', 'background', 'src', 'poster']));
   });
 
   it('AUD-013: dompurifyConfig is a secure key in both source-theme modes', async () => {
