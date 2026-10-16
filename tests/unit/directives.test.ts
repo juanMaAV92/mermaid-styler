@@ -75,3 +75,38 @@ describe('pickSourceThemeVariables', () => {
     expect(pickSourceThemeVariables(['#fff'])).toEqual({});
   });
 });
+
+describe('pickSourceThemeVariables grammar and ReDoS bounds', () => {
+  const accepts = (value: string, key = 'primaryColor') => pickSourceThemeVariables({ [key]: value })[key] === value;
+
+  it.each(['rgb(1, 2, 3)', 'rgba(1,2,3,0.5)', 'hsl(120deg 50% 50%)', 'hsl(120, 50%, 50% / 0.5)', 'RGB(255 0 0 / 50%)',
+    '#abc', '#ABCD', '#a1b2c3', '#a1b2c3d4'])('accepts %s', (value) => {
+    expect(accepts(value)).toBe(true);
+  });
+
+  it.each(['rgb(1, 2)', 'rgb(1, 2, 3, 4, 5)', 'rgb(1111, 2, 3)', 'rgb(1.2345, 2, 3)', 'rgb(123)', 'rgb(1,,2,3)',
+    `rgb(${'1, '.repeat(30)}1)`])('rejects %s', (value) => {
+    expect(accepts(value)).toBe(false);
+  });
+
+  it.each([
+    ['functional', 'primaryColor', `rgb(${'1'.repeat(5000)}x`],
+    ['functional with separators', 'primaryColor', `rgb(${'1 '.repeat(5000)}x`],
+    ['hex', 'primaryColor', `#${'a'.repeat(5000)}x`],
+    ['fontSize', 'fontSize', `${'1'.repeat(5000)}x`],
+  ])('rejects a long %s value quickly', (_name, key, value) => {
+    const start = performance.now();
+    expect(accepts(value, key)).toBe(false);
+    expect(performance.now() - start).toBeLessThan(50);
+  });
+});
+
+describe('FUNCTIONAL_COLOR without the length cap', () => {
+  it('stays fast on long whitespace runs inside the parentheses', () => {
+    // 60 chars stays under the cap; the regex itself must not blow up on space-heavy input.
+    const value = `rgb(1${' '.repeat(55)}x`;
+    const start = performance.now();
+    expect(pickSourceThemeVariables({ primaryColor: value })).toEqual({});
+    expect(performance.now() - start).toBeLessThan(50);
+  });
+});

@@ -40,9 +40,23 @@ export const hasThemeDirective = (source: string): boolean => {
   return false;
 };
 
+/** Longest value considered at all; checked before any regex so matching cost stays bounded. */
+const MAX_THEME_VALUE_LENGTH = 64;
+
 const HEX_COLOR = /^#(?:[\da-f]{3,4}|[\da-f]{6}|[\da-f]{8})$/i;
-const FUNCTIONAL_COLOR = /^(?:rgba?|hsla?)\(\s*(?:[-+]?(?:\d+\.?\d*|\.\d+)(?:%|deg)?\s*[,/]?\s*){3,4}\)$/i;
-const FONT_SIZE = /^\d{1,3}(?:\.\d+)?(?:px)?$/;
+/** A bounded number: up to 3 integer and 3 fraction digits, optional `%` or `deg`. */
+const NUM = String.raw`[-+]?(?:\d{1,3}(?:\.\d{1,3})?|\.\d{1,3})(?:%|deg)?`;
+/**
+ * Supported grammar: `rgb|rgba|hsl|hsla(` three numbers separated by `,` or whitespace, an optional fourth
+ * (alpha) after `,` or `/`, then `)`. Every repetition needs a separator, so there is no ambiguous backtracking.
+ */
+/** `,` with optional spaces, or whitespace alone; the two branches never match the same text. */
+const SEP = String.raw`(?:\s*,\s*|\s+)`;
+const FUNCTIONAL_COLOR = new RegExp(
+  String.raw`^(?:rgba?|hsla?)\(\s*${NUM}(?:${SEP}${NUM}){2}(?:\s*[,/]\s*${NUM})?\s*\)$`,
+  'i',
+);
+const FONT_SIZE = /^\d{1,3}(?:\.\d{1,2})?(?:px)?$/;
 
 /** CSS named colours (CSS Color 4) plus `transparent`, lower-cased. */
 const NAMED_COLORS = new Set(`aliceblue antiquewhite aqua aquamarine azure beige bisque black blanchedalmond blue
@@ -77,6 +91,7 @@ export const pickSourceThemeVariables = (themeVariables: unknown): Record<string
   const picked: Record<string, string> = {};
   for (const [key, raw] of Object.entries(themeVariables)) {
     if (typeof raw !== 'string') continue;
+    if (raw.length > MAX_THEME_VALUE_LENGTH) continue;
     const value = raw.trim();
     if (key === 'fontSize') {
       if (FONT_SIZE.test(value)) picked[key] = value;
