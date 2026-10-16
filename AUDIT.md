@@ -4,7 +4,7 @@
 **Estado:** Hitos 1 y 2 integrados en `main` (PR #3–#5). Re-auditoría 2026-10-15
 remediada en `fix/audit-2026-10-15` (2026-10-16): AUD-013, 015–021 resueltos;
 AUD-009, 010 y 014 pendientes de despliegue/verificación del owner tras el merge
-(Dokploy ya usa Dockerfile y puerto `8080`). Gates: 192 unitarias, 61 E2E Chromium, 8 smoke Firefox/WebKit, typecheck, lint, build y budget de bundle correctos (Node 22.19.0).
+(Dokploy ya usa Dockerfile y puerto `8080`). Gates: 215 unitarias, 68 E2E Chromium, 8 smoke Firefox/WebKit, typecheck, lint, build y budget de bundle correctos (Node 22.19.0).
 **Alcance:** escalabilidad, mantenibilidad, deuda técnica, seguridad preventiva,
 calidad de UI y operación del sitio estático.
 
@@ -508,4 +508,4 @@ Después de modificar render/export, ejecutar además una prueba manual con:
 | 2026-10-08 | Hito 3 implementado: contenedor estático, contrato HTTP, acciones 44px, licencia y contribuciones | Validación local; pendiente CI remoto y adopción en Dokploy |
 | 2026-10-08 | Correcciones transitivas compatibles y Node 22.19.0 | Sin hallazgos high; quedan 2 low de KaTeX/Mermaid |
 | 2026-10-15 | Re-auditoría: 4 P1 nuevos (AUD-013, 014, 016, 018), 5 P2 (AUD-015, 017, 019, 020, 021) | Plan docs/superpowers/plans/2026-10-15-audit-remediation.md |
-| 2026-10-16 | Cierre de la remediación: AUD-013 (incl. labels HTML), 015–021 resueltos; AUD-009/010/014 pendientes de despliegue del owner; export SVG con ancho fijo en px (`useMaxWidth: false`) | 192 unitarias, 61 E2E Chromium, 8 smoke Firefox/WebKit, typecheck, lint, build y budget de bundle correctos (Node 22.19.0) |
+| 2026-10-16 | Cierre de la remediación: AUD-013 (incl. labels HTML), 015–021 resueltos; AUD-009/010/014 pendientes de despliegue del owner; export SVG con ancho fijo en px (`useMaxWidth: false`) | 215 unitarias, 68 E2E Chromium, 8 smoke Firefox/WebKit, typecheck, lint, build y budget de bundle correctos (Node 22.19.0) |
