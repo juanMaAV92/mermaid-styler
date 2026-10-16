@@ -1,4 +1,5 @@
 import mermaid, { type MermaidConfig } from 'mermaid';
+import { pickSourceThemeVariables } from './directives';
 import { sanitizeSvgElement } from './sanitize-svg';
 import { DEFAULT_MAX_SOURCE_LENGTH, DEFAULT_RENDER_TIMEOUT_MS, MAX_EDGES, validateSource } from './validation';
 import { MermaidRenderError, type MermaidRenderResult, type RenderMermaidOptions } from './types';
@@ -81,6 +82,20 @@ const intrinsicSizeConfig = Object.fromEntries(
   MERMAID_DIAGRAM_CONFIG_KEYS.map((key) => [key, { useMaxWidth: false }]),
 ) as Pick<MermaidConfig, (typeof MERMAID_DIAGRAM_CONFIG_KEYS)[number]>;
 
+/**
+ * Mermaid keeps the last diagram's directives at module level and replays them on `initialize`; a directive whose
+ * colour khroma rejects would then fail every later render. Clear them first, and surface any throw as a render error.
+ */
+const initializeMermaid = (config: MermaidConfig) => {
+  try {
+    mermaid.mermaidAPI.reset();
+    mermaid.initialize(config);
+  } catch (error) {
+    mermaid.mermaidAPI.reset();
+    throw new MermaidRenderError('RENDER_ERROR', 'Mermaid could not apply this theme.', String(error));
+  }
+};
+
 export const renderMermaid = async (
   source: string,
   options: RenderMermaidOptions,
@@ -116,7 +131,7 @@ export const renderMermaid = async (
       ...intrinsicSizeConfig,
       themeVariables,
     };
-    mermaid.initialize(config);
+    initializeMermaid(config);
 
     let parsed: { diagramType?: string; config?: MermaidConfig };
     try {
@@ -128,11 +143,12 @@ export const renderMermaid = async (
 
     // Mermaid only re-derives dependent colors (e.g. node fill from primaryColor) when a directive also sets
     // `theme`. With the source theme allowed, fold its sanitized themeVariables into the base derivation.
-    const sourceThemeVariables = parsed.config?.themeVariables as Record<string, unknown> | undefined;
-    if (options.allowSourceTheme && sourceThemeVariables && !parsed.config?.theme) {
-      const overrides = Object.entries(sourceThemeVariables)
-        .filter((entry): entry is [string, string] => typeof entry[1] === 'string' && entry[1] !== '');
-      mermaid.initialize({ ...config, themeVariables: { ...themeVariables, ...Object.fromEntries(overrides) } });
+    // Only allowlisted colour values (and a numeric fontSize) are re-fed; see pickSourceThemeVariables.
+    const sourceOverrides = options.allowSourceTheme && !parsed.config?.theme
+      ? pickSourceThemeVariables(parsed.config?.themeVariables)
+      : {};
+    if (Object.keys(sourceOverrides).length > 0) {
+      initializeMermaid({ ...config, themeVariables: { ...themeVariables, ...sourceOverrides } });
     }
 
     try {

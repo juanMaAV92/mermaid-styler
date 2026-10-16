@@ -256,7 +256,9 @@ if (workbench) {
 
   // D1: tell the author their source's theme is being overridden by the rail (not a live region by design).
   const updateSourceThemeNotice = () => {
-    if (sourceThemeNotice) sourceThemeNotice.hidden = !hasThemeDirective(sourceInput?.value ?? '');
+    if (!sourceThemeNotice) return;
+    sourceThemeNotice.hidden = !hasThemeDirective(sourceInput?.value ?? '');
+    sourceThemeNotice.textContent = sourceThemeToggle?.checked ? messages.sourceThemeApplied : messages.sourceThemeNotice;
   };
 
   sourceInput?.addEventListener('input', () => {
@@ -266,7 +268,16 @@ if (workbench) {
     requestRender();
   });
 
-  sourceThemeToggle?.addEventListener('change', () => requestRender());
+  sourceThemeToggle?.addEventListener('change', () => {
+    updateSourceThemeNotice();
+    requestRender();
+  });
+
+  // Reset styles returns to the default policy too: the rail wins again. Theme controls already re-render on reset.
+  resetButton?.addEventListener('click', () => {
+    if (sourceThemeToggle) sourceThemeToggle.checked = false;
+    updateSourceThemeNotice();
+  });
 
   // Leaving the editor means the author has stopped typing: reveal any pending error right away.
   sourceInput?.addEventListener('blur', () => {

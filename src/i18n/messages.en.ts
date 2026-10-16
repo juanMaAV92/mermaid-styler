@@ -78,6 +78,7 @@ const messages = {
   textSize: 'Text size',
   transparent: 'Transparent background',
   sourceThemeNotice: 'This source sets its own theme; your style settings take priority.',
+  sourceThemeApplied: 'Using the theme defined in the source.',
   useSourceTheme: 'Use source theme',
   resetStyles: 'Reset styles',
   copySvg: 'Copy SVG',

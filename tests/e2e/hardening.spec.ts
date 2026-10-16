@@ -316,11 +316,32 @@ test.describe('Mermaid Styler hardening', () => {
       await toggle.check({ force: true });
       await waitForReady(page, before);
       await expect.poll(() => firstNodeFill(page)).toBe(variant.sourceFill);
+      await expect(notice).toHaveText('Using the theme defined in the source.');
+
+      before = await svgMarkup(page);
+      await page.getByRole('button', { name: 'Reset styles' }).click();
+      await waitForReady(page, before);
+      await expect(toggle).not.toBeChecked();
+      await expect(notice).toHaveText('This source sets its own theme; your style settings take priority.');
 
       await fillSourceAndWait(page, 'flowchart LR\n  A --> B');
       await expect(notice).toBeHidden();
     });
   }
+
+  test('D1: a bad source theme colour does not wedge later renders', async ({ page }) => {
+    await page.goto('/');
+    await waitForReady(page);
+    await page.getByRole('checkbox', { name: 'Use source theme' }).check({ force: true });
+    await page.locator('[data-source-input]').fill(
+      '%%{init: {"theme": "base", "themeVariables": {"primaryColor": "url(evilrel1)"}}}%%\nflowchart LR\n  A --> B',
+    );
+    await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', /error|ready/, { timeout: 10_000 });
+    await page.locator('[data-source-input]').blur();
+    await page.locator('[data-source-input]').fill('flowchart LR\n  X --> Y');
+    await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', 'ready', { timeout: 10_000 });
+    await expect(page.locator('[data-svg-host] svg g.node')).toHaveText(['X', 'Y']);
+  });
 
   test('D1: non-theme init options still apply with the source theme off', async ({ page }) => {
     const firstEdgePath = () => page.locator('[data-svg-host] svg .flowchart-link').first().getAttribute('d');

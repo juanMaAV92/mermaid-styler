@@ -39,3 +39,50 @@ export const hasThemeDirective = (source: string): boolean => {
   }
   return false;
 };
+
+const HEX_COLOR = /^#(?:[\da-f]{3,4}|[\da-f]{6}|[\da-f]{8})$/i;
+const FUNCTIONAL_COLOR = /^(?:rgba?|hsla?)\(\s*(?:[-+]?(?:\d+\.?\d*|\.\d+)(?:%|deg)?\s*[,/]?\s*){3,4}\)$/i;
+const FONT_SIZE = /^\d{1,3}(?:\.\d+)?(?:px)?$/;
+
+/** CSS named colours (CSS Color 4) plus `transparent`, lower-cased. */
+const NAMED_COLORS = new Set(`aliceblue antiquewhite aqua aquamarine azure beige bisque black blanchedalmond blue
+blueviolet brown burlywood cadetblue chartreuse chocolate coral cornflowerblue cornsilk crimson cyan darkblue
+darkcyan darkgoldenrod darkgray darkgreen darkgrey darkkhaki darkmagenta darkolivegreen darkorange darkorchid darkred
+darksalmon darkseagreen darkslateblue darkslategray darkslategrey darkturquoise darkviolet deeppink deepskyblue
+dimgray dimgrey dodgerblue firebrick floralwhite forestgreen fuchsia gainsboro ghostwhite gold goldenrod gray green
+greenyellow grey honeydew hotpink indianred indigo ivory khaki lavender lavenderblush lawngreen lemonchiffon
+lightblue lightcoral lightcyan lightgoldenrodyellow lightgray lightgreen lightgrey lightpink lightsalmon
+lightseagreen lightskyblue lightslategray lightslategrey lightsteelblue lightyellow lime limegreen linen magenta
+maroon mediumaquamarine mediumblue mediumorchid mediumpurple mediumseagreen mediumslateblue mediumspringgreen
+mediumturquoise mediumvioletred midnightblue mintcream mistyrose moccasin navajowhite navy oldlace olive olivedrab
+orange orangered orchid palegoldenrod palegreen paleturquoise palevioletred papayawhip peachpuff peru pink plum
+powderblue purple rebeccapurple red rosybrown royalblue saddlebrown salmon sandybrown seagreen seashell sienna
+silver skyblue slateblue slategray slategrey snow springgreen steelblue tan teal thistle tomato turquoise violet
+wheat white whitesmoke yellow yellowgreen transparent`.split(/\s+/));
+
+/** Keys never re-fed from the source, whatever their value (CSS/font injection surfaces and secure keys). */
+const NEVER_FROM_SOURCE = new Set(['themeCSS', 'fontFamily', 'altFontFamily', 'secure', 'securityLevel', 'startOnLoad',
+  'maxTextSize', 'suppressErrorRendering', 'maxEdges', '__proto__', 'constructor', 'prototype']);
+
+const isColor = (value: string) => HEX_COLOR.test(value) || FUNCTIONAL_COLOR.test(value)
+  || NAMED_COLORS.has(value.toLowerCase());
+
+/**
+ * D1 defense in depth: the source themeVariables the app re-feeds into `mermaid.initialize` when the author opts
+ * into the source theme. Only plain colour values pass (plus a numeric `fontSize`); font, CSS and any other key
+ * or value shape is dropped, whatever Mermaid's own sanitizer let through.
+ */
+export const pickSourceThemeVariables = (themeVariables: unknown): Record<string, string> => {
+  if (typeof themeVariables !== 'object' || themeVariables === null || Array.isArray(themeVariables)) return {};
+  const picked: Record<string, string> = {};
+  for (const [key, raw] of Object.entries(themeVariables)) {
+    if (typeof raw !== 'string') continue;
+    const value = raw.trim();
+    if (key === 'fontSize') {
+      if (FONT_SIZE.test(value)) picked[key] = value;
+    } else if (!NEVER_FROM_SOURCE.has(key) && isColor(value)) {
+      picked[key] = value;
+    }
+  }
+  return picked;
+};

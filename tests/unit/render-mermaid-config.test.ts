@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const initialize = vi.fn();
+const reset = vi.fn();
 
 vi.mock('mermaid', () => ({
   default: {
     initialize,
+    mermaidAPI: { reset },
     parse: vi.fn(async () => ({ diagramType: 'flowchart-v2' })),
     render: vi.fn(async () => ({ svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"></svg>', diagramType: 'flowchart-v2' })),
   },
@@ -72,6 +74,42 @@ describe('renderMermaid source theme (D1)', () => {
     const rederived = initialize.mock.calls[1][0] as { theme: string; themeVariables: Record<string, string> };
     expect(rederived.theme).toBe('base');
     expect(rederived.themeVariables).toMatchObject({ primaryColor: '#ff0000', lineColor: '#000' });
+  });
+
+  it('D1: only allowlisted colour values from the source reach initialize', async () => {
+    const mermaid = (await import('mermaid')).default;
+    vi.mocked(mermaid.parse).mockResolvedValueOnce({
+      diagramType: 'flowchart-v2',
+      config: { themeVariables: {
+        primaryColor: 'url(https://evil.example/a.png)',
+        lineColor: 'red; x',
+        themeCSS: '.node { fill: red }',
+        fontFamily: 'evil',
+        secondaryColor: '#00ff00',
+      } },
+    } as never);
+    const { renderMermaid } = await import('../../src/lib/mermaid/render-mermaid');
+    await renderMermaid('flowchart LR\n  A --> B', { theme, allowSourceTheme: true });
+    const serialized = JSON.stringify(initialize.mock.calls);
+    expect(serialized).not.toContain('evil');
+    expect(serialized).not.toContain('red; x');
+    expect(serialized).not.toContain('.node { fill: red }');
+    const rederived = initialize.mock.calls[1][0] as { themeVariables: Record<string, string> };
+    expect(rederived.themeVariables).toMatchObject({ primaryColor: '#fff', lineColor: '#000', secondaryColor: '#00ff00', fontFamily: 'Inter' });
+  });
+
+  it('D1: clears replayed directives before initialize so a bad directive cannot wedge later renders', async () => {
+    reset.mockClear();
+    const { renderMermaid } = await import('../../src/lib/mermaid/render-mermaid');
+    await renderMermaid('flowchart LR\n  A --> B', { theme });
+    expect(reset).toHaveBeenCalled();
+    expect(reset.mock.invocationCallOrder[0]).toBeLessThan(initialize.mock.invocationCallOrder[0]);
+  });
+
+  it('D1: an initialize failure becomes a RENDER_ERROR', async () => {
+    initialize.mockImplementationOnce(() => { throw new Error('Unsupported color format: "url(x)"'); });
+    const { renderMermaid } = await import('../../src/lib/mermaid/render-mermaid');
+    await expect(renderMermaid('flowchart LR\n  A --> B', { theme })).rejects.toMatchObject({ code: 'RENDER_ERROR' });
   });
 
   it('D1: never re-derives with the source theme off', async () => {
