@@ -3,23 +3,29 @@ import { MermaidRenderError } from './types';
 
 const isFragmentReference = (value: string) => value.trim().startsWith('#');
 
-// CSS tokenizers decode escapes (`\75 rl(`) and drop comments before
-// matching, so do the same before looking for external references.
-const normalizeCss = (value: string): string => value
-  .replace(/\/\*[\s\S]*?\*\//g, '')
+// CSS tokenizers decode escapes (`\75 rl(`) and drop comments. Decoys such as
+// `x:"/*"` make comment stripping unreliable, so fail closed: flag the value
+// if any of the raw, decoded, or decoded+comment-stripped forms matches.
+const stripComments = (value: string): string => value.replace(/\/\*[\s\S]*?\*\//g, '');
+
+const decodeEscapes = (value: string): string => value
   .replace(/\\([0-9a-fA-F]{1,6})\s?|\\([\s\S])/g, (_match, hex?: string, char?: string) => {
     if (char !== undefined) return char;
     const codePoint = Number.parseInt(hex ?? '', 16);
     return codePoint > 0 && codePoint <= 0x10ffff ? String.fromCodePoint(codePoint) : '\ufffd';
   });
 
-export const hasExternalCssReference = (raw: string): boolean => {
-  const value = normalizeCss(raw);
+const matchesExternalReference = (value: string): boolean => {
   const urls = [...value.matchAll(/url\(\s*(['"]?)(.*?)\1\s*\)/gi)].map((match) => match[2].trim());
   if (urls.some((url) => url && !isFragmentReference(url))) return true;
   return /image-set\([^)]*['"]/i.test(value)
     || /@import\b/i.test(value)
     || /(?<![\w-])src\(/i.test(value);
+};
+
+export const hasExternalCssReference = (raw: string): boolean => {
+  const decoded = decodeEscapes(raw);
+  return [raw, decoded, stripComments(decoded)].some(matchesExternalReference);
 };
 
 // Mermaid renders HTML labels inside `foreignObject`. Browsers accept `<br>`,

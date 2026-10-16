@@ -22,6 +22,8 @@ describe('SVG sanitization rules', () => {
     ['URL(https://x)', true],
     ['-webkit-image-set("https://x" 1x)', true],
     ['@import url(x)', true],
+    ['a{x:"/*";background-image:url(https://evil.example/a.png);y:"*/"}', true],
+    ['a{x:\\/*;background-image:url(https://evil.example/a.png);y:*/}', true],
     ['stroke: none', false],
   ])('AUD-013: detects external CSS references: %s', (value, expected) => {
     expect(hasExternalCssReference(value)).toBe(expected);
