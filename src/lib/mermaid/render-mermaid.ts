@@ -1,5 +1,5 @@
 import mermaid from 'mermaid';
-import { sanitizeSvg } from './sanitize-svg';
+import { sanitizeSvgElement } from './sanitize-svg';
 import { DEFAULT_MAX_SOURCE_LENGTH, DEFAULT_RENDER_TIMEOUT_MS, MAX_EDGES, validateSource } from './validation';
 import { MermaidRenderError, type MermaidRenderResult, type RenderMermaidOptions } from './types';
 
@@ -91,8 +91,10 @@ export const renderMermaid = async (
 
     try {
       const result = await withTimeout(mermaid.render(renderId, validatedSource, container), timeoutMs);
+      const element = sanitizeSvgElement(result.svg);
       return {
-        svg: sanitizeSvg(result.svg),
+        svg: new XMLSerializer().serializeToString(element),
+        element,
         diagramType: result.diagramType ?? parsed.diagramType ?? 'unknown',
         bindFunctions: result.bindFunctions,
       };

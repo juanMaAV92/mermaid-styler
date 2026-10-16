@@ -38,6 +38,7 @@ export class MermaidRenderError extends Error {
 
 export type MermaidRenderResult = {
   svg: string;
+  element: SVGSVGElement;
   diagramType: string;
   bindFunctions?: (element: Element) => void;
 };

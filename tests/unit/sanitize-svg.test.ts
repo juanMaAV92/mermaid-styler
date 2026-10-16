@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { hasExternalCssReference, normalizeMermaidLineBreaks, sanitizeSvg } from '../../src/lib/mermaid/sanitize-svg';
+import {
+  hasExternalCssReference, normalizeVoidElements, sanitizeSvg, sanitizeSvgElement,
+} from '../../src/lib/mermaid/sanitize-svg';
 
 describe('SVG sanitization rules', () => {
   it.each([
@@ -30,8 +32,61 @@ describe('SVG sanitization rules', () => {
   });
 
   it('normalizes Mermaid HTML line breaks without changing self-closing tags', () => {
-    expect(normalizeMermaidLineBreaks('<svg><br><br class="label"/><BR data-line="2"></svg>'))
+    expect(normalizeVoidElements('<svg><br><br class="label"/><BR data-line="2"></svg>'))
       .toBe('<svg><br/><br class="label"/><br data-line="2"/></svg>');
+  });
+
+  it('AUD-017: normalizes all void elements', () => {
+    expect(normalizeVoidElements('<svg><hr><img src="x"><br/></svg>'))
+      .toBe('<svg><hr/><img src="x"/><br/></svg>');
+  });
+
+  it.each([
+    ['<area><base><col><embed><input><link><meta><source><track><wbr>', '<area/><base/><col/><embed/><input/><link/><meta/><source/><track/><wbr/>'],
+    ['<img alt="a>b">', '<img alt="a>b"/>'],
+    ["<img alt='a>b' src=\"x\">", "<img alt='a>b' src=\"x\"/>"],
+    ['<IMG SRC="x"><Hr>', '<img SRC="x"/><hr/>'],
+    ['<img src="x" />', '<img src="x" />'],
+    ['<header><colgroup></colgroup></header>', '<header><colgroup></colgroup></header>'],
+    ['<image href="#x"/><linkx><imgx>', '<image href="#x"/><linkx><imgx>'],
+    ['</br><br\n class="a">', '</br><br\n class="a"/>'],
+  ])('AUD-017: normalizeVoidElements(%s)', (input, expected) => {
+    expect(normalizeVoidElements(input)).toBe(expected);
+  });
+
+  it('AUD-017: label with unclosed img sanitizes without error', () => {
+    const source = '<svg xmlns="http://www.w3.org/2000/svg"><foreignObject width="100" height="30">'
+      + '<div xmlns="http://www.w3.org/1999/xhtml"><b>bold</b> <img src="x"></div></foreignObject></svg>';
+    let output = '';
+    expect(() => { output = sanitizeSvg(source); }).not.toThrow();
+    expect(output).not.toContain('<img');
+    expect(output).toContain('bold');
+  });
+
+  it('AUD-015: removes animate/set that can rewrite href', () => {
+    const output = sanitizeSvg(
+      '<svg xmlns="http://www.w3.org/2000/svg"><a>'
+      + '<animate attributeName="href" values="javascript:alert(1)"/>'
+      + '<animateMotion dur="1s"/><animateTransform attributeName="transform"/>'
+      + '<set attributeName="href" to="javascript:alert(1)"/><text>kept</text></a></svg>',
+    );
+    expect(output).not.toMatch(/<animate|<set/i);
+    expect(output).not.toContain('javascript:');
+    expect(output).toContain('kept');
+  });
+
+  it('AUD-015: sanitizeSvgElement returns an SVGSVGElement', () => {
+    const element = sanitizeSvgElement('<svg xmlns="http://www.w3.org/2000/svg"><text>hi</text></svg>');
+    expect(element.namespaceURI).toBe('http://www.w3.org/2000/svg');
+    expect(element.localName).toBe('svg');
+    expect(element.textContent).toBe('hi');
+    const imported = document.importNode(element, true);
+    expect(imported.namespaceURI).toBe('http://www.w3.org/2000/svg');
+  });
+
+  it('AUD-017: invalid XML still throws SANITIZE_ERROR', () => {
+    expect(() => sanitizeSvgElement('<svg xmlns="http://www.w3.org/2000/svg"><g></svg>'))
+      .toThrow(expect.objectContaining({ code: 'SANITIZE_ERROR' }));
   });
 
   it('removes active and external content while preserving safe Mermaid labels', () => {

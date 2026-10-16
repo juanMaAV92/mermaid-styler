@@ -199,4 +199,18 @@ test.describe('Mermaid Styler hardening', () => {
     expect(markup).not.toContain('evil.example');
     expect(markup).not.toContain('\\75 rl');
   });
+  test('AUD-017: HTML label with <img> renders', async ({ page }) => {
+    await page.goto('/');
+    const before = await page.locator('[data-svg-host] svg').evaluate((svg) => svg.outerHTML);
+    await page.locator('[data-source-input]').fill('flowchart LR\n  A["<b>bold</b> <img src=x>"] --> B');
+    await expect.poll(
+      () => page.locator('[data-svg-host] svg').evaluate((svg) => svg.outerHTML),
+      { timeout: 10_000 },
+    ).not.toBe(before);
+    await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', 'ready');
+    await expect(page.locator('[data-source-feedback]')).toBeHidden();
+    const markup = await page.locator('[data-svg-host] svg').evaluate((svg) => svg.outerHTML);
+    expect(markup).not.toContain('<img');
+    expect(markup).toContain('bold');
+  });
 });

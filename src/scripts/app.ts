@@ -164,9 +164,7 @@ if (workbench) {
         if (outcome.status === 'superseded' || requestToken !== renderRequestToken) return;
 
         if (svgHost) {
-          svgHost.replaceChildren();
-          // lint-allow-inner-html -- removed in Task 1.3
-          svgHost.innerHTML = outcome.result.svg;
+          svgHost.replaceChildren(document.importNode(outcome.result.element, true));
           outcome.result.bindFunctions?.(svgHost);
           svgHost.hidden = false;
         }
