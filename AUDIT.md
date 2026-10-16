@@ -143,6 +143,8 @@ No se identificaron bloqueantes actuales.
   cliente; la sanitización y Mermaid strict son mitigaciones, no una corrección
   del paquete. Revalidar ante actualizaciones de Mermaid. Node 22.19.0 se usa
   en Docker/CI/.nvmrc por el mínimo requerido por Undici.
+- **ADR:** `docs/adr/0001-mermaid-12.md` (2026-10-16): ensayo con Mermaid 12.2.0
+  deja el audit limpio pero con bloqueos (typecheck, bundle); actualización aplazada.
 - **Validación:** `npm audit --omit=dev`, `npm run typecheck`, `npm run test`,
   `npm run build`.
 
