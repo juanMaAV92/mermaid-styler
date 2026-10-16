@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
@@ -25,30 +26,7 @@ const fixtures = [
   },
 ];
 
-const htmlLabelFlowchart = `flowchart LR
-  EV[[SQS<br/>documentation-events]] --> UP[documentation-ms<br/>upload handler]
-
-  subgraph TASK["ECS task validation-ms · 2 vCPU / 4 GB · desired 1 (sin cambio)"]
-    GW[gateway]
-    API[document-api]
-    W[document-worker<br/>concurrency=1]
-  end
-
-  UP -- "POST /validate {reference}<br/>timeout 25 s" --> GW
-  UP -. "fallback en 503:<br/>POST /validate/async" .-> GW
-  GW -- "proxy" --> API
-  API -- "SET NX val:idem:{hash}<br/>TTL 24 h" --> IDEM[(Redis<br/>idempotencia)]
-  API -- "task.delay()" --> QP[(Redis<br/>validation_priority)]
-  QB[(Redis<br/>validation_backlog<br/>vacía en esta fase)]
-  QP --> W
-  QB --> W
-  W -- "publica veredicto SIEMPRE" --> RES[[SQS<br/>document-validation-results<br/>+ DLQ]]
-  RES --> RH[documentation-ms<br/>result handler]
-  RH --> DB[(PostgreSQL<br/>DocumentAiValidation<br/>+ task_id, status=pending)]
-  UP --> DB
-
-  classDef nuevo fill:#d4f4dd,stroke:#1a7f37,color:#0b3d1a;
-  class IDEM,QP,QB,RES,RH nuevo;`;
+const htmlLabelFlowchart = readFileSync(new URL('../fixtures/diagrams/html-label-flowchart.mmd', import.meta.url), 'utf8');
 
 const waitForReady = async (page: Page, previousSvgMarkup?: string) => {
   if (previousSvgMarkup) {

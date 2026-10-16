@@ -1,6 +1,6 @@
 # Mermaid Styler — Auditoría técnica
 
-**Fecha:** 2026-10-08
+**Fecha:** 2026-10-08 (re-auditoría 2026-10-15)
 **Estado:** Hitos 1 y 2 integrados en `main` (PR #3–#5). Hito 3 implementado en
 `feature/phase-three-operations`; falta integración y adopción/verificación del
 Dockerfile en el servicio Dokploy existente.
@@ -24,6 +24,7 @@ dependencias y Dokploy cambian con el tiempo.
 
 | Área | Evidencia |
 | --- | --- |
+| Re-auditoría 2026-10-15 | Rama `fix/audit-2026-10-15`; sondas Playwright Chromium sobre `dist/` y curl a producción (Node 26.0.0, no 22.19.0) |
 | Repositorio remoto | `origin/main` en `783aaae` (merge PR #5) |
 | Copia de trabajo auditada | `feature/phase-three-operations`; operación, accesibilidad y documentación |
 | Stack | Astro 7.3.5, TypeScript, Mermaid 11.17.0, scripts cliente vanilla, salida estática |
@@ -194,6 +195,42 @@ No se identificaron bloqueantes actuales.
 - **Validación:** exportar ambas variantes, inspeccionar el archivo y confirmar
   que copy/download mantienen el comportamiento elegido.
 
+#### AUD-013 — Directiva `themeCSS` inyecta CSS antes de sanitizar
+
+- **Estado:** abierto 2026-10-15.
+- **Ubicación:** `src/lib/mermaid/render-mermaid.ts:52`, `src/lib/mermaid/sanitize-svg.ts:6`.
+- **Evidencia:** `%%{init: {"themeCSS": ".node rect { background-image: image-set(\"https://evil.example/a.png\" 1x); }"}}%%` provoca una request a evil.example durante el render en el contenedor temporal; solo la CSP del `<meta>` la bloquea (`FAILED … csp`). `themeCSS` no está en la lista `secure` por defecto de Mermaid. `hasExternalCssUrl` solo detecta `url(`, no `image-set`, `@import "…"` ni `src()`.
+- **Impacto:** un source no confiable (p. ej. generado por IA) puede lanzar requests externas durante el render; sin la CSP la defensa sería nula.
+- **Acción:** declarar la lista `secure` completa con `themeCSS` y ampliar la detección de CSS externo (`image-set`, `@import`, `src()`).
+- **Validación:** fixtures `css-import-string`, `css-image-set` y `themecss-image-set` (`tests/fixtures/adversarial/`); E2E sin requests a evil.example.
+
+#### AUD-014 — Producción sin contrato de headers
+
+- **Estado:** abierto 2026-10-15.
+- **Ubicación:** servicio Dokploy en producción; `deploy/nginx.conf`.
+- **Evidencia:** curl 2026-10-15: sin CSP header, X-Frame-Options, Referrer-Policy ni Cache-Control; `/nope` y `/healthz` devuelven 200 con `index.html`. La meta-CSP no admite `frame-ancestors`, por lo que no hay protección de clickjacking.
+- **Impacto:** la defensa en profundidad HTTP validada en contenedor local (AUD-010) no está activa en producción.
+- **Acción:** adoptar el Dockerfile en Dokploy (AUD-009/010) y ejecutar `check:deployment` contra el dominio.
+- **Validación:** `npm run check:deployment` contra el dominio público y curl de cabeceras.
+
+#### AUD-016 — Límite de complejidad incoherente con Mermaid
+
+- **Estado:** abierto 2026-10-15.
+- **Ubicación:** `src/lib/mermaid/validation.ts:5`.
+- **Evidencia:** el validador permite 1.200 conexiones; Mermaid `maxEdges` es 500. Con 600 y 1.100 aristas: pasa la validación, hay long tasks de 239–653 ms y el error es el genérico "Mermaid could not render this source.".
+- **Impacto:** el usuario espera hasta 653 ms de bloqueo y recibe un error sin causa accionable.
+- **Acción:** límite único de 500 aristas compartido con `maxEdges` de Mermaid.
+- **Validación:** fixture `edges-501.mmd`; error inmediato `SOURCE_TOO_COMPLEX` sin long task.
+
+#### AUD-018 — Se descarta el error real de Mermaid
+
+- **Estado:** abierto 2026-10-15.
+- **Ubicación:** `src/scripts/app.ts:132-140`.
+- **Evidencia:** se muestra el `error.message` genérico; `error.details` ("Parse error on line N…", "Edge limit exceeded…") se pierde.
+- **Impacto:** el usuario no sabe qué línea corregir ni por qué falla el render.
+- **Acción:** mostrar línea y detalle del error; añadir botón "Ir a la línea".
+- **Validación:** E2E con source inválido: el mensaje incluye la línea y el detalle.
+
 ### P2 — planificar en la siguiente iteración
 
 #### AUD-005 — PNG de alta resolución tiene coste de memoria y fidelidad parcial
@@ -282,6 +319,57 @@ No se identificaron bloqueantes actuales.
 - **Acción:** configurar HTML revalidable, assets con hash cacheables y CSP
   compatible con Mermaid/SVG; documentar la configuración.
 
+#### AUD-015 — Diferencial de parsers en el sanitizador
+
+- **Estado:** abierto 2026-10-15.
+- **Ubicación:** `src/lib/mermaid/sanitize-svg.ts`, `src/scripts/app.ts:168`.
+- **Evidencia:** se sanitiza con `DOMParser` `image/svg+xml` + `XMLSerializer` y se reinserta con `innerHTML` (parser HTML): patrón clásico de mXSS. Sin bypass demostrado. `animate`/`set` pueden reescribir `href` en tiempo de ejecución y no están en la denylist.
+- **Impacto:** un vector que se interprete distinto en ambos parsers podría eludir el sanitizador.
+- **Acción:** devolver un nodo DOM e insertarlo con `importNode`; añadir `animate`/`set` a la denylist.
+- **Validación:** fixture `animate-set-href.svg`; sin `innerHTML` en el camino de inserción del SVG.
+
+#### AUD-017 — Labels HTML válidos con elementos vacíos rompen el sanitizador
+
+- **Estado:** abierto 2026-10-15.
+- **Ubicación:** `src/lib/mermaid/sanitize-svg.ts` (`normalizeMermaidLineBreaks`).
+- **Evidencia:** `A["<b>bold</b> <img src=x onerror=alert(1)>"] --> B` produce "Mermaid returned an invalid SVG document.". La normalización solo cubre `<br>`.
+- **Impacto:** diagramas legítimos con `<img>`, `<hr>` u otros void elements no se pueden renderizar.
+- **Acción:** normalizar todos los void elements o eliminar el parseo intermedio.
+- **Validación:** fixtures `foreignobject-img-unclosed.svg` y `void-hr-unclosed.svg`.
+
+#### AUD-019 — Export con source embebido distinto del renderizado
+
+- **Estado:** abierto 2026-10-15.
+- **Ubicación:** `src/scripts/app.ts:67-71`.
+- **Evidencia:** en error con artefacto previo, los exports entregan el último diagrama válido pero "Include source" embebe el texto actual (inválido) del textarea.
+- **Impacto:** el SVG exportado contiene un source que no corresponde al diagrama dibujado.
+- **Acción:** capturar el source en el render exitoso y usarlo en el export.
+- **Validación:** E2E: exportar con source inválido; el `<metadata>` contiene el source del último render válido.
+
+#### AUD-020 — Copy de scaffolding en producción
+
+- **Estado:** abierto 2026-10-15.
+- **Ubicación:** `src/components/`, `src/i18n/messages.en.ts`.
+- **Evidencia:** "Renderer connects next" con atajo ⌘↵ sin handler; "Scaffold ready"; "Example artifact"; "The live Mermaid engine connects here in the next phase"; footer "Paste Mermaid to start styling" siempre visible.
+- **Impacto:** el producto comunica que está inacabado y anuncia un atajo inexistente.
+- **Acción:** sustituir por copy definitivo y retirar el atajo sin handler.
+- **Validación:** revisión visual y E2E sin las cadenas de scaffolding.
+
+#### AUD-021 — Interacción del preview y móvil
+
+- **Estado:** abierto 2026-10-15.
+- **Ubicación:** `src/styles/global.css`, `src/scripts/app.ts`, componentes del preview.
+- **Evidencia:**
+  - Móvil: botones del topbar solo con icono; Copy SVG/Copy PNG comparten icono y Export SVG/PNG también.
+  - "Fit" resetea a 100% (no ajusta); `.rendered-diagram > svg { width: min(100%, 760px) }` encoge diagramas; en móvil el texto mide ~5px.
+  - Rueda: `preventDefault` siempre (secuestra el scroll), con saltos de 25% por evento de trackpad.
+  - Flechas sin `preventDefault`; límite de pan fijo de 1.200px.
+  - Al teclear: errores rojos y múltiples `role=alert`/aria-live duplicados.
+  - `%%{init}%%` `themeVariables` pisan el style rail en silencio.
+- **Impacto:** uso móvil y teclado degradados; el preview captura el scroll de la página.
+- **Acción:** corregir Fit, escala, rueda con modificador, iconos distintos, debounce de errores y aviso cuando `init` pisa el style rail.
+- **Validación:** E2E de rueda/Fit/móvil; fixture `init-primary-red.mmd`.
+
 ### P3 — mejoras de calidad y documentación
 
 #### AUD-011 — Labels y targets táctiles por reforzar
@@ -304,6 +392,12 @@ No se identificaron bloqueantes actuales.
   dependencias instaladas en `/third-party-licenses.txt`. No se empaquetan fuentes.
 - **Acción:** actualizar los estados con evidencia/fecha y añadir una licencia
   para Mermaid Styler antes de solicitar contribuciones externas.
+
+## Menores (2026-10-15)
+
+Actions fijadas por tag, nginx como root en :80, sin Dependabot, `@types/node ^26`
+vs engine 22, `gzip_types` sin `text/plain` (`third-party-licenses.txt` 624 KB),
+KaTeX low (requiere Mermaid 12).
 
 ## Aspectos positivos a preservar
 
@@ -392,3 +486,4 @@ Después de modificar render/export, ejecutar además una prueba manual con:
 | 2026-10-02 | Astro 7.3.5 y Undici 8.11.2; riesgo transitorio de `http-cache-semantics` aceptado | 2 hallazgos high solo en cadena de build; no hay actualización compatible |
 | 2026-10-08 | Hito 3 implementado: contenedor estático, contrato HTTP, acciones 44px, licencia y contribuciones | Validación local; pendiente CI remoto y adopción en Dokploy |
 | 2026-10-08 | Correcciones transitivas compatibles y Node 22.19.0 | Sin hallazgos high; quedan 2 low de KaTeX/Mermaid |
+| 2026-10-15 | Re-auditoría: 4 P1 nuevos (AUD-013, 014, 016, 018), 5 P2 (AUD-015, 017, 019, 020, 021) | Plan docs/superpowers/plans/2026-10-15-audit-remediation.md |
