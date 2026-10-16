@@ -60,6 +60,15 @@ describe('render state controller', () => {
     expect(ui.button.title).toBe('Copy SVG');
   });
 
+  it('marks actions stale while rendering only when the source changed', () => {
+    const ui = setup();
+    ui.controller.setRenderState('ready', { hasArtifact: true });
+    ui.controller.setRenderState('rendering', { stale: false });
+    expect(ui.button.dataset.stale).toBeUndefined();
+    ui.controller.setRenderState('rendering', { stale: true });
+    expect(ui.button.dataset.stale).toBe('true');
+  });
+
   it('keeps the previous artifact visible and actions enabled while rendering', () => {
     const ui = setup();
     ui.controller.setRenderState('ready', { hasArtifact: true });

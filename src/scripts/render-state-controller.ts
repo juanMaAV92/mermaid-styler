@@ -9,6 +9,8 @@ export type RenderStateOptions = {
   hasArtifact?: boolean;
   /** Neutral "editing" indicator: a render error is pending reveal and must not be shown or announced yet. */
   editing?: boolean;
+  /** The source being rendered/edited differs from the one behind the displayed artifact. */
+  stale?: boolean;
 };
 
 type RenderStateMessages = {
@@ -174,7 +176,7 @@ export const createRenderStateController = ({
 
     const canUseArtifact = hasArtifact && state !== 'empty';
     // Between a render request and its success (or after a failure) the preview is the last valid one, so exports are stale.
-    const stale = hasArtifact && (isError || isRendering || editing);
+    const stale = hasArtifact && (isError || Boolean(options.stale));
     actionButtons.forEach((button) => {
       button.disabled = !canUseArtifact;
       if (button.dataset.baseTitle === undefined) button.dataset.baseTitle = button.title;

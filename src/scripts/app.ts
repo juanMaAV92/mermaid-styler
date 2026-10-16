@@ -177,7 +177,7 @@ if (workbench) {
       return;
     }
     // The author is still typing: keep the last valid preview and a neutral indicator until they pause.
-    applyRenderState('rendering', { hasArtifact, editing: true, message });
+    applyRenderState('rendering', { hasArtifact, editing: true, message, stale: sourceInput?.value !== lastRenderedSource });
     revealPendingError = reveal;
     errorRevealTimer = setTimeout(reveal, remaining);
   };
@@ -197,7 +197,7 @@ if (workbench) {
 
     const requestToken = renderRequestToken += 1;
     const hasArtifact = workbench.dataset.hasArtifact === 'true';
-    applyRenderState('rendering', { hasArtifact });
+    applyRenderState('rendering', { hasArtifact, stale: source !== lastRenderedSource });
 
     renderTimer = setTimeout(async () => {
       try {
