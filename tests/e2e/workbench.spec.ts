@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { acceptDialogs } from './helpers';
 
 test.describe('Mermaid Styler workbench', () => {
@@ -91,11 +91,16 @@ test.describe('Mermaid Styler workbench', () => {
     const layer = page.locator('[data-preview-layer]');
     const zoom = page.locator('[data-preview-zoom]');
 
-    await expect(zoom).toHaveText('100%');
+    await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', 'ready', { timeout: 10_000 });
+    // AUD-021: the initial zoom is the Fit scale, and Zoom in multiplies it by 1.25.
+    const readScale = () => layer.evaluate((element) => Number(element.style.getPropertyValue('--preview-scale')));
+    await expect.poll(readScale).toBeGreaterThan(0);
+    const fitScale = await readScale();
+    await expect(zoom).toHaveText(`${Math.round(fitScale * 100)}%`);
     const initialSvg = await page.locator('[data-svg-host] svg').evaluate((svg) => svg.id);
 
     await page.getByRole('button', { name: 'Zoom in' }).click();
-    await expect(zoom).toHaveText('125%');
+    await expect(zoom).toHaveText(`${Math.round(fitScale * 125)}%`);
     expect(await page.locator('[data-svg-host] svg').evaluate((svg) => svg.id)).toBe(initialSvg);
 
     const box = await viewport.boundingBox();
@@ -114,6 +119,10 @@ test.describe('Mermaid Styler workbench', () => {
     await viewport.press('0');
     await expect(zoom).toHaveText('100%');
     await expect(layer).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 0)');
+
+    // AUD-021: Home (and the Fit button) return to the Fit scale.
+    await viewport.press('Home');
+    await expect(zoom).toHaveText(`${Math.round(fitScale * 100)}%`);
   });
 
   test('supports preset selection with keyboard navigation', async ({ page }) => {
@@ -304,5 +313,117 @@ test.describe('Mermaid Styler workbench', () => {
     await page.getByRole('textbox', { name: 'Source' }).fill('');
     await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', 'empty');
     await expect(page.locator('.app-footer').getByText('Paste Mermaid to start styling')).toBeVisible();
+  });
+
+  const chain = (direction: 'LR' | 'TD', count = 12) => [
+    `flowchart ${direction}`,
+    ...Array.from({ length: count - 1 }, (_, index) => `  N${index}[Step ${index}] --> N${index + 1}[Step ${index + 1}]`),
+  ].join('\n');
+
+  const renderSource = async (page: Page, source: string) => {
+    const stage = page.locator('[data-artifact-stage]');
+    await expect(stage).toHaveAttribute('data-render-state', 'ready', { timeout: 10_000 });
+    const svg = page.locator('[data-svg-host] svg');
+    const before = await svg.evaluate((element) => element.id);
+    await page.getByRole('textbox', { name: 'Source' }).fill(source);
+    await expect.poll(() => svg.evaluate((element) => element.id), { timeout: 10_000 }).not.toBe(before);
+    await expect(stage).toHaveAttribute('data-render-state', 'ready');
+  };
+
+  const fitMetrics = (page: Page) => page.evaluate(() => {
+    const viewport = document.querySelector<HTMLElement>('[data-preview-viewport]')!;
+    const svg = document.querySelector<SVGSVGElement>('[data-svg-host] svg')!;
+    const v = viewport.getBoundingClientRect();
+    const b = svg.getBoundingClientRect();
+    return {
+      inside: b.left >= v.left - 2 && b.top >= v.top - 2 && b.right <= v.right + 2 && b.bottom <= v.bottom + 2,
+      fill: Math.max(b.width / v.width, b.height / v.height),
+      viewportHeight: viewport.clientHeight,
+      innerHeight: window.innerHeight,
+    };
+  });
+
+  for (const [name, direction] of [['wide', 'LR'], ['tall', 'TD']] as const) {
+    test(`AUD-021: rendered diagram fits the viewport (${name})`, async ({ page }) => {
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await page.goto('/');
+      await renderSource(page, chain(direction));
+
+      await expect.poll(async () => {
+        const metrics = await fitMetrics(page);
+        return metrics.inside && metrics.fill >= 0.8;
+      }, { timeout: 5_000 }).toBe(true);
+      const metrics = await fitMetrics(page);
+      // The viewport must not grow to the diagram's unscaled height.
+      expect(metrics.viewportHeight).toBeLessThan(metrics.innerHeight);
+    });
+  }
+
+  test('AUD-021: wheel without modifier scrolls the page', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/');
+    await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', 'ready', { timeout: 10_000 });
+    expect(await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight)).toBeGreaterThan(0);
+    const zoom = page.locator('[data-preview-zoom]');
+    const zoomBefore = await zoom.textContent();
+    const box = await page.locator('[data-preview-viewport]').boundingBox();
+    if (!box) throw new Error('Preview viewport has no bounding box.');
+    await page.mouse.move(box.x + box.width / 2, box.y + Math.min(box.height / 2, 300));
+
+    await page.mouse.wheel(0, 300);
+
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+    await expect(zoom).toHaveText(zoomBefore ?? '');
+  });
+
+  test('AUD-021: ctrl+wheel zooms', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/');
+    await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', 'ready', { timeout: 10_000 });
+    const zoom = page.locator('[data-preview-zoom]');
+    const zoomBefore = await zoom.textContent();
+    const box = await page.locator('[data-preview-viewport]').boundingBox();
+    if (!box) throw new Error('Preview viewport has no bounding box.');
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+
+    await page.keyboard.down('Control');
+    await page.mouse.wheel(0, 200);
+    await page.keyboard.up('Control');
+
+    await expect(zoom).not.toHaveText(zoomBefore ?? '');
+    expect(await page.evaluate(() => window.scrollY)).toBe(0);
+  });
+
+  test('AUD-021: arrow keys in viewport do not scroll the page', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/');
+    await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', 'ready', { timeout: 10_000 });
+    const viewport = page.locator('[data-preview-viewport]');
+    await viewport.focus();
+    const scrollBefore = await page.evaluate(() => window.scrollY);
+
+    for (let i = 0; i < 3; i += 1) await viewport.press('ArrowDown');
+    await page.waitForTimeout(100);
+    expect(await page.evaluate(() => window.scrollY)).toBe(scrollBefore);
+  });
+
+  test('AUD-021: style-only re-render keeps the zoom', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/');
+    await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', 'ready', { timeout: 10_000 });
+    const zoom = page.locator('[data-preview-zoom]');
+    await page.getByRole('button', { name: 'Zoom in' }).click();
+    const zoomed = await zoom.textContent();
+    const svg = page.locator('[data-svg-host] svg');
+    const before = await svg.evaluate((element) => element.id);
+
+    await page.locator('#primary-color').evaluate((input) => {
+      const colorInput = input as HTMLInputElement;
+      colorInput.value = '#ffcc00';
+      colorInput.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+
+    await expect.poll(() => svg.evaluate((element) => element.id), { timeout: 10_000 }).not.toBe(before);
+    await expect(zoom).toHaveText(zoomed ?? '');
   });
 });

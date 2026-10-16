@@ -1,4 +1,4 @@
-import mermaid from 'mermaid';
+import mermaid, { type MermaidConfig } from 'mermaid';
 import { sanitizeSvgElement } from './sanitize-svg';
 import { DEFAULT_MAX_SOURCE_LENGTH, DEFAULT_RENDER_TIMEOUT_MS, MAX_EDGES, validateSource } from './validation';
 import { MermaidRenderError, type MermaidRenderResult, type RenderMermaidOptions } from './types';
@@ -50,6 +50,34 @@ export const MERMAID_SECURE_KEYS = [
   'altFontFamily',
 ] as const;
 
+/** Per-diagram config keys of Mermaid 11 whose block accepts `useMaxWidth`. */
+type DiagramConfigKey = {
+  // `0 extends 1 & T` detects `any` (e.g. themeVariables), which would otherwise match every key.
+  [K in keyof MermaidConfig]-?: 0 extends 1 & MermaidConfig[K]
+    ? never
+    : 'useMaxWidth' extends keyof NonNullable<MermaidConfig[K]> ? K : never;
+}[keyof MermaidConfig];
+
+/**
+ * Every per-diagram block, so `useMaxWidth: false` applies to all diagram types: the SVG then keeps its
+ * intrinsic size (100% zoom = real size) and the preview fits it itself. The type check below fails the
+ * build if a Mermaid upgrade adds a diagram block missing from this list.
+ */
+export const MERMAID_DIAGRAM_CONFIG_KEYS = [
+  'flowchart', 'swimlane', 'sequence', 'gantt', 'journey', 'timeline', 'class', 'state', 'er', 'pie',
+  'quadrantChart', 'xyChart', 'requirement', 'architecture', 'mindmap', 'ishikawa', 'kanban', 'gitGraph',
+  'c4', 'sankey', 'packet', 'block', 'eventmodeling', 'treeView', 'radar', 'venn', 'wardley-beta',
+  'cynefin', 'railroad',
+] as const satisfies readonly DiagramConfigKey[];
+
+type MissingDiagramConfigKey = Exclude<DiagramConfigKey, (typeof MERMAID_DIAGRAM_CONFIG_KEYS)[number]>;
+const diagramConfigKeysAreExhaustive: [MissingDiagramConfigKey] extends [never] ? true : MissingDiagramConfigKey = true;
+void diagramConfigKeysAreExhaustive;
+
+const intrinsicSizeConfig = Object.fromEntries(
+  MERMAID_DIAGRAM_CONFIG_KEYS.map((key) => [key, { useMaxWidth: false }]),
+) as Pick<MermaidConfig, (typeof MERMAID_DIAGRAM_CONFIG_KEYS)[number]>;
+
 export const renderMermaid = async (
   source: string,
   options: RenderMermaidOptions,
@@ -68,6 +96,7 @@ export const renderMermaid = async (
       theme: 'base',
       maxTextSize: maxSourceLength,
       maxEdges: MAX_EDGES,
+      ...intrinsicSizeConfig,
       themeVariables: {
         background: options.theme.transparent ? 'transparent' : options.theme.background,
         primaryColor: options.theme.primaryColor,

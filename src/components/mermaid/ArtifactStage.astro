@@ -16,6 +16,7 @@ interface Props {
     fitPreview: string;
     zoomLevel: string;
     panHint: string;
+    largeDiagramHint: string;
   };
 }
 
@@ -47,6 +48,7 @@ const { title, hint, labels } = Astro.props;
             <div class="rendered-diagram" data-svg-host hidden></div>
           </div>
           <span class="preview-pan-hint">{labels.panHint}</span>
+          <p class="preview-large-hint" data-preview-large-hint hidden>{labels.largeDiagramHint}</p>
         </div>
         <div class="preview-controls" data-preview-controls aria-label={labels.previewNavigation}>
           <button class="preview-control" type="button" data-preview-action="zoom-out" aria-label={labels.zoomOut}>−</button>

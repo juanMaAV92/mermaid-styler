@@ -6,7 +6,8 @@ import { LatestWinsRenderCoordinator } from '../lib/mermaid/render-coordinator';
 import { ERROR_REVEAL_MS, RENDER_DEBOUNCE_MS, isRenderState, type RenderState } from '../lib/ui/render-state';
 import { addSvgMetadata } from '../lib/export/svg';
 import { createArtifactActionHandler } from './artifact-actions';
-import { initPreviewControls } from './preview-controls';
+import { hasSignificantSizeChange, type Size } from '../lib/ui/preview-geometry';
+import { initPreviewControls, readSvgIntrinsicSize } from './preview-controls';
 import { announceAction, createRenderStateController, type RenderStateOptions } from './render-state-controller';
 import { initThemeControls } from './theme-controls';
 
@@ -28,6 +29,7 @@ if (workbench) {
   const previewViewport = workbench.querySelector<HTMLElement>('[data-preview-viewport]');
   const previewLayer = workbench.querySelector<HTMLElement>('[data-preview-layer]');
   const previewZoom = workbench.querySelector<HTMLElement>('[data-preview-zoom]');
+  const previewLargeHint = workbench.querySelector<HTMLElement>('[data-preview-large-hint]');
   const previewActions = [...workbench.querySelectorAll<HTMLButtonElement>('[data-preview-action]')];
   const stageStatus = workbench.querySelector<HTMLElement>('[data-stage-status]');
   const stageCaption = workbench.querySelector<HTMLElement>('[data-stage-caption-text]');
@@ -80,12 +82,19 @@ if (workbench) {
 
   const announceArtifactAction = (message: string) => announceAction(liveStatus, message);
 
-  initPreviewControls({
+  // Declared before use by the getFontSize closure; assigned once the theme controls exist.
+  let getDiagramFontSize = () => 0;
+  const previewControls = initPreviewControls({
     viewport: previewViewport,
     layer: previewLayer,
     zoom: previewZoom,
+    largeDiagramHint: previewLargeHint,
+    getFontSize: () => getDiagramFontSize(),
     actions: previewActions,
   });
+  // Refit only when the diagram is new in kind or size; style-only re-renders keep the author's zoom and pan.
+  let lastFitDiagramType: string | undefined;
+  let lastFitSize: Size | undefined;
 
   const renderStateController = createRenderStateController({
     workbench,
@@ -127,6 +136,8 @@ if (workbench) {
     customPresetLabel: messages.customPreset,
     onChange: () => requestRender(),
   });
+
+  getDiagramFontSize = () => themeControls.getMermaidThemeOptions().fontSize;
 
   const handleArtifactAction = createArtifactActionHandler({
     getRenderedSvg,
@@ -219,6 +230,15 @@ if (workbench) {
           svgHost.hidden = false;
         }
         applyRenderState('ready', { hasArtifact: true });
+        // After 'ready' so the viewport is visible and has a real size to fit into.
+        const renderedSvg = getRenderedSvg();
+        const size = renderedSvg ? readSvgIntrinsicSize(renderedSvg) : undefined;
+        const typeChanged = outcome.result.diagramType !== lastFitDiagramType;
+        if (typeChanged || !size || hasSignificantSizeChange(lastFitSize, size)) {
+          previewControls.fit();
+          lastFitDiagramType = outcome.result.diagramType;
+          lastFitSize = size;
+        }
       } catch (error) {
         if (requestToken === renderRequestToken) handleRenderError(error, requestToken);
       }

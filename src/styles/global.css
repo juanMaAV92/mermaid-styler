@@ -479,9 +479,11 @@ input:focus-visible {
   overflow: hidden;
   border: var(--border-thin) solid rgba(11, 15, 20, 0.08);
   background: rgba(244, 241, 232, 0.32);
+  height: clamp(420px, calc(100vh - 420px), 760px);
   cursor: grab;
   isolation: isolate;
-  touch-action: none;
+  /* Vertical one-finger swipes scroll the page; pinch and two-finger pan are handled in preview-controls. */
+  touch-action: pan-y;
 }
 
 .preview-viewport:focus-visible {
@@ -494,10 +496,9 @@ input:focus-visible {
 }
 
 .preview-layer {
-  display: grid;
-  place-items: center;
-  width: 100%;
-  min-height: 100%;
+  /* Out of flow: the diagram's unscaled size must never grow the viewport. Scaling is around the viewport center. */
+  position: absolute;
+  inset: 0;
   transform: translate3d(var(--preview-pan-x, 0px), var(--preview-pan-y, 0px), 0) scale(var(--preview-scale, 1));
   transform-origin: center;
   transition: transform var(--motion-fast) var(--ease-out);
@@ -519,6 +520,27 @@ input:focus-visible {
   font-size: 9px;
   letter-spacing: 0.03em;
   pointer-events: none;
+}
+
+.preview-large-hint {
+  position: absolute;
+  top: var(--space-3);
+  left: 50%;
+  margin: 0;
+  padding: 4px 8px;
+  transform: translateX(-50%);
+  color: var(--diagram-text);
+  background: rgba(244, 241, 232, 0.9);
+  border: var(--border-thin) solid rgba(11, 15, 20, 0.16);
+  font-family: var(--font-code);
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.preview-large-hint[hidden] {
+  display: none;
 }
 
 .preview-controls {
@@ -573,9 +595,10 @@ input:focus-visible {
 }
 
 .rendered-diagram {
-  display: grid;
-  place-items: center;
-  width: 100%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .rendered-diagram[hidden] {
@@ -583,10 +606,11 @@ input:focus-visible {
 }
 
 .rendered-diagram > svg {
+  /* Intrinsic size (Mermaid useMaxWidth: false); the preview layer scales it to fit. */
   display: block;
-  width: min(100%, 760px);
-  height: auto;
-  max-height: 100%;
+  width: var(--diagram-intrinsic-width, auto);
+  height: var(--diagram-intrinsic-height, auto);
+  max-width: none;
   overflow: visible;
 }
 
@@ -1035,6 +1059,7 @@ input:focus-visible {
 
   .preview-viewport {
     min-height: 300px;
+    height: clamp(300px, 42vh, 420px);
   }
 
   .style-scroll {

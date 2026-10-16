@@ -38,6 +38,7 @@ const messages = {
   fitPreview: 'Fit',
   zoomLevel: 'Zoom level',
   panHint: 'Drag to move',
+  largeDiagramHint: 'Large diagram: zoom in or export',
   exportSvg: 'Export SVG',
   copyPng: 'Copy PNG',
   svgExported: 'SVG downloaded.',
