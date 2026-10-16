@@ -27,6 +27,7 @@ const messages = {
   stateEmpty: 'Empty',
   stateRendering: 'Rendering',
   editing: 'Editing…',
+  exportsLastValid: 'Exports use the last valid preview',
   lastValidStamp: 'Last valid',
   stateInvalid: 'Invalid Mermaid',
   stateTimeout: 'Timed out',

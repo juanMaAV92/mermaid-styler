@@ -26,6 +26,7 @@ type RenderStateMessages = {
   errorFallback: string;
   goToLine: string;
   editing: string;
+  exportsLastValid: string;
 };
 
 type RenderStateControllerOptions = {
@@ -172,7 +173,19 @@ export const createRenderStateController = ({
     }
 
     const canUseArtifact = hasArtifact && state !== 'empty';
-    actionButtons.forEach((button) => { button.disabled = !canUseArtifact; });
+    // Between a render request and its success (or after a failure) the preview is the last valid one, so exports are stale.
+    const stale = hasArtifact && (isError || isRendering || editing);
+    actionButtons.forEach((button) => {
+      button.disabled = !canUseArtifact;
+      if (button.dataset.baseTitle === undefined) button.dataset.baseTitle = button.title;
+      if (stale) {
+        button.dataset.stale = 'true';
+        button.title = messages.exportsLastValid;
+      } else {
+        delete button.dataset.stale;
+        button.title = button.dataset.baseTitle;
+      }
+    });
   };
 
   return { setRenderState };

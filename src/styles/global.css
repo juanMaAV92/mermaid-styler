@@ -186,6 +186,10 @@ input:focus-visible {
   opacity: 0.42;
 }
 
+.button[data-stale='true']:not(:disabled) {
+  opacity: 0.72;
+}
+
 .button--primary {
   color: var(--ink);
   background: var(--signal-cyan);

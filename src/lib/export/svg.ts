@@ -13,6 +13,7 @@ export const addSvgMetadata = (markup: string, metadata: SvgMetadata) => {
 
   const document = new DOMParser().parseFromString(markup, 'image/svg+xml');
   const root = document.documentElement;
+  if (document.getElementsByTagName('parsererror').length > 0) throw new Error('The SVG markup is not well-formed XML.');
   if (!root || root.tagName.toLowerCase() !== 'svg') throw new Error('The SVG metadata could not be prepared.');
 
   root.querySelectorAll('title, desc').forEach((element) => element.remove());

@@ -61,19 +61,22 @@ if (workbench) {
   let lastSourceInputAt = Number.NEGATIVE_INFINITY;
   let renderRequestToken = 0;
   let requestRender = () => undefined;
+  // The source that produced the SVG currently in the preview; exports embed this, never the live textarea.
+  let lastRenderedSource = '';
 
   const getRenderedSvg = () => svgHost?.querySelector<SVGSVGElement>('svg');
 
   const getRenderedSvgMarkup = () => {
     const svg = getRenderedSvg();
     if (!svg) throw new Error('No rendered SVG is available.');
-    return svg.outerHTML;
+    // XML serialization keeps foreignObject HTML children (e.g. <br/>) well-formed; outerHTML would emit HTML rules.
+    return new XMLSerializer().serializeToString(svg);
   };
 
   const getExportSvgMarkup = () => addSvgMetadata(getRenderedSvgMarkup(), {
     title: messages.exportTitle,
     description: messages.exportDescription,
-    source: includeSourceToggle?.checked ? sourceInput?.value ?? '' : undefined,
+    source: includeSourceToggle?.checked ? lastRenderedSource : undefined,
   });
 
   const announceArtifactAction = (message: string) => announceAction(liveStatus, message);
@@ -206,6 +209,7 @@ if (workbench) {
 
         if (svgHost) {
           svgHost.replaceChildren(document.importNode(outcome.result.element, true));
+          lastRenderedSource = source;
           outcome.result.bindFunctions?.(svgHost);
           svgHost.hidden = false;
         }

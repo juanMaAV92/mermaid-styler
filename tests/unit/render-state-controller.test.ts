@@ -47,6 +47,19 @@ describe('render state controller', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
+  it('marks actions stale while the artifact does not match the source and clears it on ready', () => {
+    const ui = setup();
+    ui.button.title = 'Copy SVG';
+    ui.controller.setRenderState('ready', { hasArtifact: true });
+    expect(ui.button.dataset.stale).toBeUndefined();
+    ui.controller.setRenderState('error', { hasArtifact: true });
+    expect(ui.button.dataset.stale).toBe('true');
+    expect(ui.button.title).toBe(messages.exportsLastValid);
+    ui.controller.setRenderState('ready', { hasArtifact: true });
+    expect(ui.button.dataset.stale).toBeUndefined();
+    expect(ui.button.title).toBe('Copy SVG');
+  });
+
   it('keeps the previous artifact visible and actions enabled while rendering', () => {
     const ui = setup();
     ui.controller.setRenderState('ready', { hasArtifact: true });

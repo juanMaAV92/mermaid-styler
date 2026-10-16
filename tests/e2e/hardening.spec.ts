@@ -139,6 +139,70 @@ test.describe('Mermaid Styler hardening', () => {
     test.info().annotations.push({ type: 'resource-audit', description: JSON.stringify(resources) });
   });
 
+  const readDownload = async (download: { path(): Promise<string | null> }) => {
+    const path = await download.path();
+    if (!path) throw new Error('Download path is unavailable.');
+    return readFile(path, 'utf8');
+  };
+
+  test('AUD-019: include-source export embeds last rendered source', async ({ page }) => {
+    await page.goto('/');
+    const editor = page.getByRole('textbox', { name: 'Source' });
+    const sourceA = 'flowchart LR\n  A[SourceAlpha] --> B[Done]';
+    const sourceB = 'flowchart LR\n  A[SourceBeta] -->';
+    const previous = await page.locator('[data-svg-host] svg').evaluate((svg) => svg.outerHTML);
+    await editor.fill(sourceA);
+    await waitForReady(page, previous);
+    await expect(page.locator('[data-action]').first()).not.toHaveAttribute('data-stale', /.*/);
+
+    await editor.fill(sourceB);
+    await expect(page.locator('[data-source-feedback]')).toBeVisible({ timeout: 10_000 });
+    const buttons = page.locator('[data-action]');
+    for (let index = 0; index < (await buttons.count()); index += 1) {
+      await expect(buttons.nth(index)).toHaveAttribute('data-stale', 'true');
+      await expect(buttons.nth(index)).toHaveAttribute('title', /last valid preview/);
+    }
+
+    await page.getByRole('checkbox', { name: 'Include Mermaid source in SVG' }).check();
+    const download = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Export SVG' }).click();
+    const content = await readDownload(await download);
+    expect(content).toContain('SourceAlpha');
+    expect(content).not.toContain('SourceBeta');
+
+    await editor.fill(sourceA);
+    await expect(page.locator('[data-source-feedback]')).toBeHidden({ timeout: 10_000 });
+    await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', 'ready');
+    await expect(buttons.first()).not.toHaveAttribute('data-stale', /.*/);
+    await expect(buttons.first()).toHaveAttribute('title', 'Copy SVG');
+  });
+
+  test('AUD-019: exported SVG with HTML labels is well-formed XML', async ({ page, context, browserName }) => {
+    if (browserName === 'chromium') await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.goto('/');
+    const editor = page.getByRole('textbox', { name: 'Source' });
+    const previous = await page.locator('[data-svg-host] svg').evaluate((svg) => svg.outerHTML);
+    await editor.fill(htmlLabelFlowchart);
+    await waitForReady(page, previous);
+
+    const parse = (text: string) => page.evaluate((markup) => {
+      const doc = new DOMParser().parseFromString(markup, 'image/svg+xml');
+      return { root: doc.documentElement.tagName, errors: doc.querySelectorAll('parsererror').length };
+    }, text);
+
+    const download = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Export SVG' }).click();
+    const parsed = await parse(await readDownload(await download));
+    expect(parsed).toEqual({ root: 'svg', errors: 0 });
+
+    if (browserName === 'chromium') {
+      await page.getByRole('button', { name: 'Copy SVG' }).click();
+      await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toContain('<svg');
+      const copied = await page.evaluate(() => navigator.clipboard.readText());
+      expect(await parse(copied)).toEqual({ root: 'svg', errors: 0 });
+    }
+  });
+
   test('AUD-013: themeCSS directive triggers no external request', async ({ page }) => {
     const externalRequests: string[] = [];
     const origin = new URL(process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:4322').origin;
