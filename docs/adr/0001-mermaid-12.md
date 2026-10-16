@@ -52,6 +52,9 @@ máquina, mismo árbol) fallaron 1/5 en una pasada (el mismo `:346`) y 3/5 en ot
 inestable en ambas versiones bajo carga; el ensayo no demuestra una regresión
 atribuible a 12.2.0, pero tampoco una pasada limpia. Un resultado concluyente
 requiere repetirlo en CI o en una máquina sin carga.
+El fallo de `hardening.spec.ts:346` (curvas de flowchart) en 12.2.0 puede ser una
+regresión real del layout ELK por defecto y no solo carga: volver a verificarlo
+una vez fijado `layout: 'dagre'` (paso 3).
 
 ### Matriz de diagramas
 
@@ -129,8 +132,7 @@ usuarios y la evidencia E2E de Chromium no es concluyente.
 
 - AUD-001 permanece en "2 low bajo seguimiento"; no cambia de estado.
 - Dependabot sigue ignorando las subidas mayores de `mermaid`; las menores y
-  parches de 11.x se siguen recibiendo. Revisar esta decisión al cerrar los
-  bloqueos y eliminar el `ignore` en el mismo PR de actualización (el
-  `ignore` se **mantiene** por ahora).
+  parches de 11.x se siguen recibiendo. El `ignore` se **mantiene ahora** y se
+  **elimina en el PR que actualice a Mermaid 12**, una vez cerrados los bloqueos.
 - Se debe volver a ejecutar el ensayo cuando salga una 12.x posterior a 12.2.0
   (mejoras de ELK y bundle) o cuando se publique un KaTeX corregido para 11.x.
