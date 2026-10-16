@@ -165,6 +165,7 @@ if (workbench) {
 
         if (svgHost) {
           svgHost.replaceChildren();
+          // eslint-disable-next-line no-restricted-syntax -- removed in Task 1.3
           svgHost.innerHTML = outcome.result.svg;
           outcome.result.bindFunctions?.(svgHost);
           svgHost.hidden = false;

@@ -19,7 +19,8 @@
     "test:e2e": "playwright test --project=chromium",
     "test:e2e:only": "playwright test --project=chromium",
     "pretest:e2e:cross-browser": "npm run build",
-    "test:e2e:cross-browser": "playwright test --project=firefox --project=webkit"
+    "test:e2e:cross-browser": "playwright test --project=firefox --project=webkit",
+    "lint": "eslint src tests scripts"
   },
   "dependencies": {
     "astro": "7.3.5",
@@ -27,10 +28,14 @@
     "mermaid": "11.17.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.62.1",
     "@types/node": "^22.20.5",
+    "eslint": "^10.12.0",
     "happy-dom": "^20.14.5",
     "typescript": "7.0.2",
+    "typescript-eslint": "^8.71.2",
+    "typescript6": "npm:typescript@^6.0.3",
     "vitest": "^4.1.11"
   }
 }
