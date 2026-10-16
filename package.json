@@ -17,8 +17,10 @@
     "test:unit": "vitest run",
     "pretest:e2e": "npm run build",
     "test:e2e": "playwright test --project=chromium",
+    "test:e2e:only": "playwright test --project=chromium",
     "pretest:e2e:cross-browser": "npm run build",
-    "test:e2e:cross-browser": "playwright test --project=firefox --project=webkit"
+    "test:e2e:cross-browser": "playwright test --project=firefox --project=webkit",
+    "lint": "node scripts/check-no-inner-html.mjs"
   },
   "dependencies": {
     "astro": "7.3.5",
@@ -27,7 +29,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
-    "@types/node": "^26.2.0",
+    "@types/node": "^22.20.5",
     "happy-dom": "^20.14.5",
     "typescript": "7.0.2",
     "vitest": "^4.1.11"

@@ -1,0 +1,42 @@
+# Verifies the live production site (deployment contract + browser smoke).
+# NOTE: until the owner applies the Dokploy change (AUD-014: switch to the
+# Dockerfile build, container port 80 -> 8080), production does not satisfy
+# `check:deployment`, so this workflow is expected to fail. It should go green
+# after Task 2.3 / the Dokploy migration.
+name: Post-deploy check
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 6 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  production:
+    name: Production contract and smoke
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22.19.0
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify HTTP contract
+        run: npm run check:deployment -- https://mermaid-styler.duckdns.org
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify render and export in production
+        run: npx playwright test tests/e2e/cross-browser-smoke.spec.ts --project=chromium
+        env:
+          PLAYWRIGHT_BASE_URL: https://mermaid-styler.duckdns.org

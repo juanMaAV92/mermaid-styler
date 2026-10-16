@@ -2,7 +2,7 @@
 import ColorField from '../ui/ColorField.astro';
 import Icon from '../ui/Icon.astro';
 import PresetList from './PresetList.astro';
-import { defaultPreset, presetIds, presets as themePresets } from '../../lib/theme/presets';
+import { DEFAULT_PRESET_ID, defaultPreset, presetIds, presets as themePresets } from '../../lib/theme/presets';
 import { DEFAULT_DIAGRAM_FONT_SIZE } from '../../lib/theme/defaults';
 
 interface Props {
@@ -30,6 +30,8 @@ interface Props {
     fontFamily: string;
     textSize: string;
     transparent: string;
+    sourceThemeNotice: string;
+    useSourceTheme: string;
     resetStyles: string;
   };
 }
@@ -55,7 +57,7 @@ const presets = presetIds.map((id) => ({
       <span class="panel-label">{labels.controlSurfaceLabel}</span>
       <h2 id="style-title">{labels.style}</h2>
     </div>
-    <span class="panel-meta" data-current-preset>Light</span>
+    <span class="panel-meta" data-current-preset>{presetLabels[DEFAULT_PRESET_ID]}</span>
   </div>
 
   <div class="style-scroll">
@@ -73,6 +75,12 @@ const presets = presetIds.map((id) => ({
         <ColorField id="line-color" label={labels.lineColor} value={defaultPreset.line} variable="--diagram-line" />
         <ColorField id="accent-color" label={labels.accentColor} value={defaultPreset.accent} variable="--diagram-accent" />
       </div>
+      <p class="source-theme-notice" data-source-theme-notice hidden>{labels.sourceThemeNotice}</p>
+      <label class="toggle-field" for="use-source-theme">
+        <span>{labels.useSourceTheme}</span>
+        <input id="use-source-theme" type="checkbox" data-source-theme-toggle />
+        <span class="toggle-track" aria-hidden="true"><span></span></span>
+      </label>
     </fieldset>
 
     <fieldset class="style-section">
@@ -87,7 +95,7 @@ const presets = presetIds.map((id) => ({
         </select>
       </label>
       <label class="range-field" for="text-size">
-        <span>{labels.textSize}<output data-text-size>{DEFAULT_DIAGRAM_FONT_SIZE}px</output></span>
+        <span>{labels.textSize}<span data-text-size>{DEFAULT_DIAGRAM_FONT_SIZE}px</span></span>
         <input id="text-size" type="range" min="12" max="22" value={String(DEFAULT_DIAGRAM_FONT_SIZE)} step="1" data-text-size-input />
       </label>
     </fieldset>

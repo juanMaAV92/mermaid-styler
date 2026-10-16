@@ -12,6 +12,8 @@ export type MermaidThemeOptions = {
 
 export type RenderMermaidOptions = {
   theme: MermaidThemeOptions;
+  /** D1: let the source's `%%{init}%%` / frontmatter `theme` and `themeVariables` apply. Default false (rail wins). */
+  allowSourceTheme?: boolean;
   maxSourceLength?: number;
   timeoutMs?: number;
 };
@@ -20,6 +22,7 @@ export type RenderErrorCode =
   | 'EMPTY_SOURCE'
   | 'SOURCE_TOO_LARGE'
   | 'SOURCE_TOO_COMPLEX'
+  | 'UNSAFE_SOURCE'
   | 'PARSE_ERROR'
   | 'RENDER_TIMEOUT'
   | 'RENDER_ERROR'
@@ -38,6 +41,9 @@ export class MermaidRenderError extends Error {
 
 export type MermaidRenderResult = {
   svg: string;
+  element: SVGSVGElement;
   diagramType: string;
+  /** M2: the sanitizer removed a `<style>` block (an external `url()`), so the diagram renders without its styles. */
+  droppedStyle: boolean;
   bindFunctions?: (element: Element) => void;
 };

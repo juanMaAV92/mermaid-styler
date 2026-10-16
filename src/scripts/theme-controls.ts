@@ -1,7 +1,7 @@
 import type { PngExportOptions } from '../lib/export/png';
 import type { MermaidThemeOptions } from '../lib/mermaid/types';
 import { DEFAULT_DIAGRAM_FONT_FAMILY, DEFAULT_DIAGRAM_FONT_SIZE } from '../lib/theme/defaults';
-import { DEFAULT_PRESET_ID, defaultPreset, getPreset, toThemeVariables } from '../lib/theme/presets';
+import { DEFAULT_PRESET_ID, defaultPreset, getPreset, toThemeVariables, type PresetId } from '../lib/theme/presets';
 
 type ThemeControlsOptions = {
   workbench: HTMLElement;
@@ -10,10 +10,11 @@ type ThemeControlsOptions = {
   presetList?: HTMLElement | null;
   presetButtons: HTMLButtonElement[];
   textSizeInput?: HTMLInputElement | null;
-  textSizeOutput?: HTMLOutputElement | null;
+  textSizeOutput?: HTMLElement | null;
   fontSelect?: HTMLSelectElement | null;
   transparentToggle?: HTMLInputElement | null;
   resetButton?: HTMLButtonElement | null;
+  presetLabels: Record<PresetId, string>;
   customPresetLabel: string;
   onChange: () => void;
 };
@@ -29,6 +30,7 @@ export const initThemeControls = ({
   fontSelect,
   transparentToggle,
   resetButton,
+  presetLabels,
   customPresetLabel,
   onChange,
 }: ThemeControlsOptions) => {
@@ -48,7 +50,7 @@ export const initThemeControls = ({
     if (!preset) return;
 
     workbench.dataset.preset = presetId;
-    currentPreset?.replaceChildren(document.createTextNode(presetId[0].toUpperCase() + presetId.slice(1)));
+    currentPreset?.replaceChildren(document.createTextNode(presetLabels[presetId as PresetId]));
     const variables = toThemeVariables(preset);
 
     Object.entries(variables).forEach(([name, value]) => workbench.style.setProperty(name, value));
@@ -156,7 +158,7 @@ export const initThemeControls = ({
   textSizeInput?.addEventListener('input', () => {
     const value = `${textSizeInput.value}px`;
     workbench.style.setProperty('--diagram-font-size', value);
-    if (textSizeOutput) textSizeOutput.value = value;
+    if (textSizeOutput) textSizeOutput.textContent = value;
     markCustom();
     onChange();
   });
@@ -171,7 +173,7 @@ export const initThemeControls = ({
     applyPreset(DEFAULT_PRESET_ID);
     if (fontSelect) fontSelect.selectedIndex = 0;
     if (textSizeInput) textSizeInput.value = String(DEFAULT_DIAGRAM_FONT_SIZE);
-    if (textSizeOutput) textSizeOutput.value = `${DEFAULT_DIAGRAM_FONT_SIZE}px`;
+    if (textSizeOutput) textSizeOutput.textContent = `${DEFAULT_DIAGRAM_FONT_SIZE}px`;
     workbench.style.setProperty('--diagram-font', DEFAULT_DIAGRAM_FONT_FAMILY);
     workbench.style.setProperty('--diagram-font-size', `${DEFAULT_DIAGRAM_FONT_SIZE}px`);
     if (transparentToggle) transparentToggle.checked = false;

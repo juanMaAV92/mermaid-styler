@@ -7,9 +7,9 @@ interface Props {
     inputLabel: string;
     source: string;
     sourceCount: string;
-    renderLater: string;
     errorDetails: string;
     errorFallback: string;
+    goToLine: string;
   };
 }
 
@@ -24,6 +24,11 @@ const { source, sourceHint, placeholder, labels } = Astro.props;
     </div>
     <span class="panel-meta" data-source-count>0 {labels.sourceCount}</span>
   </div>
+  <div class="source-feedback" id="source-feedback" data-source-feedback hidden>
+    <strong data-source-feedback-title>{labels.errorDetails}</strong>
+    <pre class="source-feedback__body" data-source-feedback-body>{labels.errorFallback}</pre>
+    <button type="button" class="source-feedback__action" data-go-to-line hidden></button>
+  </div>
   <div class="editor-wrap">
     <textarea
       id="mermaid-source"
@@ -34,16 +39,11 @@ const { source, sourceHint, placeholder, labels } = Astro.props;
       autocapitalize="off"
       data-source-input
       aria-labelledby="source-title"
-      aria-describedby="source-hint source-feedback"
+      aria-describedby="source-hint"
       placeholder={placeholder}
     >{source}</textarea>
   </div>
-  <div class="source-feedback" data-source-feedback hidden role="alert">
-    <strong data-source-feedback-title>{labels.errorDetails}</strong>
-    <span data-source-feedback-body>{labels.errorFallback}</span>
-  </div>
   <div class="panel-foot">
     <span id="source-hint">{sourceHint}</span>
-    <span class="keyboard-hint"><kbd>⌘</kbd><kbd>↵</kbd> {labels.renderLater}</span>
   </div>
 </section>
