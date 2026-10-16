@@ -58,8 +58,10 @@ test.describe('Mermaid Styler workbench', () => {
 
     await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', 'error', { timeout: 10_000 });
     await expect(page.locator('[data-svg-host] svg')).toBeVisible();
-    await expect(page.locator('[data-state-notice="error"]')).toBeVisible();
+    await expect(page.locator('[data-last-valid-stamp]')).toBeVisible();
+    await expect(page.locator('[data-last-valid-stamp]')).toHaveText(/last valid/i);
     await expect(page.locator('[data-source-feedback]')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Export SVG' })).toBeEnabled();
   });
 
   test('updates the rendered SVG when a color control changes', async ({ page }) => {
@@ -182,5 +184,104 @@ test.describe('Mermaid Styler workbench', () => {
     await page.getByRole('textbox', { name: 'Source' }).fill('flowchart LR\n A --> B[');
     await expect(page.locator('[data-source-feedback]')).toContainText(/line 2/i, { timeout: 10_000 });
     await expect(page.locator('[data-source-feedback]')).toBeInViewport();
+  });
+
+  test('UX: typing invalid source shows no alert before 800ms idle', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', 'ready', { timeout: 10_000 });
+    const editor = page.locator('[data-source-input]');
+    const feedback = page.locator('[data-source-feedback]');
+
+    await editor.evaluate((element) => {
+      const textarea = element as HTMLTextAreaElement;
+      const w = window as unknown as { __lastInputAt: number; __revealedAt: number | null };
+      w.__lastInputAt = 0;
+      w.__revealedAt = null;
+      textarea.addEventListener('input', () => { w.__lastInputAt = performance.now(); });
+      const target = document.querySelector<HTMLElement>('[data-source-feedback]');
+      if (!target) throw new Error('Missing source feedback.');
+      new MutationObserver(() => {
+        if (!target.hidden && w.__revealedAt === null) w.__revealedAt = performance.now();
+      }).observe(target, { attributes: true, attributeFilter: ['hidden'] });
+      textarea.focus();
+      textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    });
+
+    await editor.pressSequentially('\n  A --> B[', { delay: 50 });
+    expect(await feedback.isHidden()).toBe(true);
+    await expect(feedback).toBeVisible({ timeout: 3_000 });
+    await expect(editor).toBeFocused();
+
+    const timing = await page.evaluate(() => {
+      const w = window as unknown as { __lastInputAt: number; __revealedAt: number | null };
+      return { lastInputAt: w.__lastInputAt, revealedAt: w.__revealedAt };
+    });
+    expect(timing.revealedAt).not.toBeNull();
+    expect((timing.revealedAt ?? 0) - timing.lastInputAt).toBeGreaterThanOrEqual(790);
+  });
+
+  test('UX: previous diagram stays visible and exports stay enabled while rendering', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', 'ready', { timeout: 10_000 });
+    await expect(page.locator('[data-svg-host] svg')).toBeVisible();
+
+    await page.evaluate(() => {
+      const w = window as unknown as { __flags: { svgHidden: boolean; actionDisabled: boolean }; __stopWatch: () => void };
+      w.__flags = { svgHidden: false, actionDisabled: false };
+      const check = () => {
+        const svg = document.querySelector<SVGSVGElement>('[data-svg-host] svg');
+        if (!svg || !svg.checkVisibility()) w.__flags.svgHidden = true;
+        if ([...document.querySelectorAll<HTMLButtonElement>('[data-action]')].some((button) => button.disabled)) {
+          w.__flags.actionDisabled = true;
+        }
+      };
+      const observer = new MutationObserver(check);
+      observer.observe(document.body, { attributes: true, childList: true, subtree: true });
+      let frame = 0;
+      const loop = () => { check(); frame = requestAnimationFrame(loop); };
+      loop();
+      w.__stopWatch = () => { observer.disconnect(); cancelAnimationFrame(frame); };
+    });
+
+    const slider = page.locator('#text-size');
+    for (const value of ['15', '17', '19', '16', '18']) {
+      await slider.fill(value);
+      await page.waitForTimeout(120);
+    }
+    await expect(page.locator('[data-text-size]')).toHaveText('18px');
+    await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', 'ready', { timeout: 10_000 });
+    await expect(page.locator('[data-artifact-stage]')).not.toHaveClass(/stage-rendering-overlay/);
+
+    const flags = await page.evaluate(() => {
+      const w = window as unknown as { __flags: { svgHidden: boolean; actionDisabled: boolean }; __stopWatch: () => void };
+      w.__stopWatch();
+      return w.__flags;
+    });
+    expect(flags).toEqual({ svgHidden: false, actionDisabled: false });
+  });
+
+  test('A11y: exactly one live region', async ({ page }) => {
+    const expectSingleLiveRegion = async () => {
+      await expect(page.getByRole('status')).toHaveCount(1);
+      await expect(page.getByRole('alert')).toHaveCount(0);
+      await expect(page.locator('[aria-live]')).toHaveCount(1);
+      await expect(page.locator('[aria-live]')).toHaveAttribute('data-live-status', '');
+      await expect(page.getByRole('status')).toHaveAttribute('data-live-status', '');
+    };
+
+    await page.goto('/');
+    await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', 'ready', { timeout: 10_000 });
+    await expectSingleLiveRegion();
+
+    const editor = page.getByRole('textbox', { name: 'Source' });
+    await editor.fill('flowchart LR\n  A --> B[');
+    await expect(page.locator('[data-source-feedback]')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('[data-live-status]')).toContainText(/invalid/i);
+    await expectSingleLiveRegion();
+
+    await editor.fill('flowchart LR\n  A --> B');
+    await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', 'ready', { timeout: 10_000 });
+    await expect(page.locator('[data-source-feedback]')).toBeHidden();
+    await expectSingleLiveRegion();
   });
 });

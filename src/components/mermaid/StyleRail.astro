@@ -87,7 +87,7 @@ const presets = presetIds.map((id) => ({
         </select>
       </label>
       <label class="range-field" for="text-size">
-        <span>{labels.textSize}<output data-text-size>{DEFAULT_DIAGRAM_FONT_SIZE}px</output></span>
+        <span>{labels.textSize}<span data-text-size>{DEFAULT_DIAGRAM_FONT_SIZE}px</span></span>
         <input id="text-size" type="range" min="12" max="22" value={String(DEFAULT_DIAGRAM_FONT_SIZE)} step="1" data-text-size-input />
       </label>
     </fieldset>

@@ -3,11 +3,11 @@ import { formatRenderError } from '../lib/mermaid/format-error';
 import { MermaidRenderError } from '../lib/mermaid/types';
 import type { MermaidRenderResult, RenderMermaidOptions } from '../lib/mermaid/types';
 import { LatestWinsRenderCoordinator } from '../lib/mermaid/render-coordinator';
-import { isRenderState, type RenderState } from '../lib/ui/render-state';
+import { ERROR_REVEAL_MS, RENDER_DEBOUNCE_MS, isRenderState, type RenderState } from '../lib/ui/render-state';
 import { addSvgMetadata } from '../lib/export/svg';
 import { createArtifactActionHandler } from './artifact-actions';
 import { initPreviewControls } from './preview-controls';
-import { createRenderStateController, type RenderStateOptions } from './render-state-controller';
+import { announce, createRenderStateController, type RenderStateOptions } from './render-state-controller';
 import { initThemeControls } from './theme-controls';
 
 type RenderStateEvent = RenderStateOptions & { state: RenderState };
@@ -28,17 +28,17 @@ if (workbench) {
   const svgHost = workbench.querySelector<HTMLElement>('[data-svg-host]');
   const previewViewport = workbench.querySelector<HTMLElement>('[data-preview-viewport]');
   const previewLayer = workbench.querySelector<HTMLElement>('[data-preview-layer]');
-  const previewZoom = workbench.querySelector<HTMLOutputElement>('[data-preview-zoom]');
+  const previewZoom = workbench.querySelector<HTMLElement>('[data-preview-zoom]');
   const previewActions = [...workbench.querySelectorAll<HTMLButtonElement>('[data-preview-action]')];
   const stageStatus = workbench.querySelector<HTMLElement>('[data-stage-status]');
   const stageCaption = workbench.querySelector<HTMLElement>('[data-stage-caption-text]');
   const stageStateViews = [...workbench.querySelectorAll<HTMLElement>('[data-state-view]')];
-  const stageNotices = [...workbench.querySelectorAll<HTMLElement>('[data-state-notice]')];
+  const lastValidStamp = workbench.querySelector<HTMLElement>('[data-last-valid-stamp]');
   const currentPreset = workbench.querySelector<HTMLElement>('[data-current-preset]');
   const presetList = workbench.querySelector<HTMLElement>('[role="listbox"]');
   const presetButtons = [...workbench.querySelectorAll<HTMLButtonElement>('[data-preset]')];
   const textSizeInput = workbench.querySelector<HTMLInputElement>('[data-text-size-input]');
-  const textSizeOutput = workbench.querySelector<HTMLOutputElement>('[data-text-size]');
+  const textSizeOutput = workbench.querySelector<HTMLElement>('[data-text-size]');
   const fontSelect = workbench.querySelector<HTMLSelectElement>('[data-font-select]');
   const transparentToggle = workbench.querySelector<HTMLInputElement>('[data-transparent-toggle]');
   const includeSourceToggle = workbench.querySelector<HTMLInputElement>('[data-include-source-toggle]');
@@ -55,6 +55,10 @@ if (workbench) {
     return renderMermaid(source, options);
   });
   let renderTimer: ReturnType<typeof setTimeout> | undefined;
+  let errorRevealTimer: ReturnType<typeof setTimeout> | undefined;
+  let revealPendingError: (() => void) | undefined;
+  // -Infinity means "no recent typing": errors from style changes or the first render show immediately.
+  let lastSourceInputAt = Number.NEGATIVE_INFINITY;
   let renderRequestToken = 0;
   let requestRender = () => undefined;
 
@@ -72,9 +76,7 @@ if (workbench) {
     source: includeSourceToggle?.checked ? sourceInput?.value ?? '' : undefined,
   });
 
-  const announceArtifactAction = (message: string) => {
-    if (liveStatus) liveStatus.textContent = message;
-  };
+  const announceArtifactAction = (message: string) => announce(liveStatus, message);
 
   initPreviewControls({
     viewport: previewViewport,
@@ -89,7 +91,7 @@ if (workbench) {
     stageStatus,
     stageCaption,
     stageStateViews,
-    stageNotices,
+    lastValidStamp,
     sourceFeedback,
     sourceFeedbackTitle,
     sourceFeedbackBody,
@@ -141,22 +143,45 @@ if (workbench) {
     sourceInput.setSelectionRange(start, start);
   });
 
-  const handleRenderError = (error: unknown) => {
+  const cancelPendingErrorReveal = () => {
+    if (errorRevealTimer) clearTimeout(errorRevealTimer);
+    errorRevealTimer = undefined;
+    revealPendingError = undefined;
+  };
+
+  const handleRenderError = (error: unknown, requestToken: number) => {
     const isTimeout = error instanceof MermaidRenderError && error.code === 'RENDER_TIMEOUT';
     const hasArtifact = workbench.dataset.hasArtifact === 'true';
     const formatted = formatRenderError(error, messages, (sourceInput?.value ?? '').split('\n').length);
-    applyRenderState(isTimeout ? 'timeout' : 'error', {
-      hasArtifact,
-      message: hasArtifact ? messages.lastValidPreview : undefined,
-      title: formatted.title,
-      detail: formatted.detail,
-      line: formatted.line,
-    });
+    const message = hasArtifact ? messages.lastValidPreview : undefined;
+    const reveal = () => {
+      cancelPendingErrorReveal();
+      if (requestToken !== renderRequestToken) return;
+      applyRenderState(isTimeout ? 'timeout' : 'error', {
+        hasArtifact,
+        message,
+        title: formatted.title,
+        detail: formatted.detail,
+        line: formatted.line,
+      });
+    };
+
+    cancelPendingErrorReveal();
+    const remaining = ERROR_REVEAL_MS - (performance.now() - lastSourceInputAt);
+    if (remaining <= 0) {
+      reveal();
+      return;
+    }
+    // The author is still typing: keep the last valid preview and a neutral indicator until they pause.
+    applyRenderState('rendering', { hasArtifact, editing: true, message });
+    revealPendingError = reveal;
+    errorRevealTimer = setTimeout(reveal, remaining);
   };
 
   requestRender = () => {
     if (!sourceInput) return;
     if (renderTimer) clearTimeout(renderTimer);
+    cancelPendingErrorReveal();
 
     const source = sourceInput.value;
     if (!source.trim()) {
@@ -186,9 +211,9 @@ if (workbench) {
         if (scaffoldPreview) scaffoldPreview.hidden = true;
         applyRenderState('ready', { hasArtifact: true });
       } catch (error) {
-        if (requestToken === renderRequestToken) handleRenderError(error);
+        if (requestToken === renderRequestToken) handleRenderError(error, requestToken);
       }
-    }, 300);
+    }, RENDER_DEBOUNCE_MS);
   };
 
 
@@ -197,8 +222,15 @@ if (workbench) {
   };
 
   sourceInput?.addEventListener('input', () => {
+    lastSourceInputAt = performance.now();
     updateSourceCount();
     requestRender();
+  });
+
+  // Leaving the editor means the author has stopped typing: reveal any pending error right away.
+  sourceInput?.addEventListener('blur', () => {
+    lastSourceInputAt = Number.NEGATIVE_INFINITY;
+    revealPendingError?.();
   });
 
   const uiApi = {

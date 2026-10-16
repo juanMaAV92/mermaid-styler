@@ -8,10 +8,7 @@ interface Props {
     emptyState: string;
     renderingState: string;
     readyState: string;
-    invalidState: string;
-    invalidStateHint: string;
-    timeoutState: string;
-    timeoutStateHint: string;
+    lastValidStamp: string;
     sourceAlternative: string;
     previewNavigation: string;
     zoomOut: string;
@@ -31,7 +28,7 @@ const { title, hint, labels } = Astro.props;
       <span class="panel-label">{labels.artifactStageLabel}</span>
       <h2 id="preview-title">{labels.preview}</h2>
     </div>
-    <span class="stage-status" data-stage-status role="status">{title}</span>
+    <span class="stage-status" data-stage-status>{title}</span>
   </div>
   <div class="artifact-stage" data-artifact-stage data-render-state="ready" aria-describedby="preview-status">
     <div class="stage-surface">
@@ -39,18 +36,11 @@ const { title, hint, labels } = Astro.props;
         <span class="stage-state__mark" aria-hidden="true">+</span>
         <strong>{labels.emptyState}</strong>
       </div>
-      <div class="stage-state stage-state--rendering" data-state-view="rendering" hidden aria-live="polite">
+      <div class="stage-state stage-state--rendering" data-state-view="rendering" hidden>
         <span class="stage-loader" aria-hidden="true"></span>
         <strong>{labels.renderingState}</strong>
       </div>
-      <div class="stage-notice stage-notice--error" data-state-notice="error" hidden role="alert">
-        <strong>{labels.invalidState}</strong>
-        <span>{labels.invalidStateHint}</span>
-      </div>
-      <div class="stage-notice stage-notice--timeout" data-state-notice="timeout" hidden role="alert">
-        <strong>{labels.timeoutState}</strong>
-        <span>{labels.timeoutStateHint}</span>
-      </div>
+      <span class="stage-stamp" data-last-valid-stamp hidden>{labels.lastValidStamp}</span>
       <div class="stage-state stage-state--ready" data-state-view="ready">
         <div class="preview-viewport" data-preview-viewport tabindex="0" role="region" aria-label={labels.previewNavigation}>
           <div class="preview-layer" data-preview-layer>
@@ -76,19 +66,20 @@ const { title, hint, labels } = Astro.props;
                 <text class="diagram-note" x="380" y="334" text-anchor="middle">Proof bench preview</text>
               </svg>
             </div>
-            <div class="rendered-diagram" data-svg-host hidden aria-live="off"></div>
+            <div class="rendered-diagram" data-svg-host hidden></div>
           </div>
           <span class="preview-pan-hint">{labels.panHint}</span>
         </div>
         <div class="preview-controls" data-preview-controls aria-label={labels.previewNavigation}>
           <button class="preview-control" type="button" data-preview-action="zoom-out" aria-label={labels.zoomOut}>−</button>
-          <output class="preview-zoom" data-preview-zoom aria-label={labels.zoomLevel} aria-live="polite">100%</output>
+          <span class="sr-only">{labels.zoomLevel}</span>
+          <span class="preview-zoom" data-preview-zoom>100%</span>
           <button class="preview-control" type="button" data-preview-action="zoom-in" aria-label={labels.zoomIn}>+</button>
           <span class="preview-control-divider" aria-hidden="true"></span>
           <button class="preview-fit" type="button" data-preview-action="fit">{labels.fitPreview}</button>
         </div>
       </div>
-      <div class="stage-caption" id="preview-status" aria-live="polite">
+      <div class="stage-caption" id="preview-status">
         <span class="caption-mark" aria-hidden="true"></span>
         <span data-stage-caption-text>{hint}</span>
       </div>

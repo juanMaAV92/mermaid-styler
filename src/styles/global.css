@@ -440,18 +440,16 @@ kbd {
 }
 
 .stage-state[hidden],
-.stage-notice[hidden] {
+.stage-stamp[hidden] {
   display: none;
 }
 
-.stage-state strong,
-.stage-notice strong {
+.stage-state strong {
   font-size: 15px;
   font-weight: 600;
 }
 
-.stage-state span,
-.stage-notice span {
+.stage-state span {
   color: var(--diagram-border);
   font-size: 12px;
   line-height: 1.5;
@@ -618,23 +616,55 @@ kbd {
   animation: stage-spin 800ms linear infinite;
 }
 
-.stage-notice {
+/* Error with a previous artifact: the last valid preview stays, visibly marked as stale. */
+.stage-stamp {
   position: absolute;
-  inset: var(--space-4) var(--space-4) auto;
+  top: var(--space-3);
+  left: var(--space-4);
   z-index: 1;
-  display: grid;
-  gap: var(--space-1);
-  padding: var(--space-3) var(--space-4);
-  border: var(--border-thin) solid rgba(255, 107, 87, 0.42);
+  padding: 2px 6px;
+  border: var(--border-thin) solid var(--ember);
   color: var(--ember);
   background: rgba(244, 241, 232, 0.94);
+  font-family: var(--font-code);
   font-size: 11px;
-  line-height: 1.45;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1.4;
+  text-transform: uppercase;
+  pointer-events: none;
 }
 
-.stage-notice--timeout {
-  border-color: rgba(105, 114, 124, 0.48);
-  color: var(--diagram-border);
+.rendered-diagram > svg {
+  transition: opacity var(--motion-base) var(--ease-out), filter var(--motion-base) var(--ease-out);
+}
+
+[data-has-artifact="true"] .artifact-stage:is([data-render-state="error"], [data-render-state="timeout"]) .stage-surface::before,
+.artifact-stage.stage-rendering-overlay .stage-surface::before {
+  position: absolute;
+  inset: -1px -1px auto;
+  z-index: 1;
+  height: 2px;
+  content: "";
+  pointer-events: none;
+}
+
+[data-has-artifact="true"] .artifact-stage:is([data-render-state="error"], [data-render-state="timeout"]) .stage-surface::before {
+  background: var(--ember);
+}
+
+[data-has-artifact="true"] .artifact-stage:is([data-render-state="error"], [data-render-state="timeout"]) .rendered-diagram > svg {
+  opacity: 0.55;
+  filter: grayscale(0.4);
+}
+
+/* Slow render with a previous artifact: keep it visible, dimmed, under a thin cyan registration line. */
+.artifact-stage.stage-rendering-overlay .stage-surface::before {
+  background: var(--signal-cyan);
+}
+
+.artifact-stage.stage-rendering-overlay .rendered-diagram > svg {
+  opacity: 0.6;
 }
 
 .stage-alternative {
@@ -838,7 +868,7 @@ kbd {
 }
 
 .color-field code,
-.range-field output {
+.range-field [data-text-size] {
   color: var(--steel);
   font-family: var(--font-code);
   font-size: 10px;
@@ -1116,8 +1146,13 @@ kbd {
   .select-field select,
   .color-field input[type='color'],
   .toggle-track,
-  .stage-notice {
+  .stage-stamp {
     border-color: CanvasText;
+  }
+
+  [data-has-artifact="true"] .artifact-stage:is([data-render-state="error"], [data-render-state="timeout"]) .stage-surface::before,
+  .artifact-stage.stage-rendering-overlay .stage-surface::before {
+    background: CanvasText;
   }
 
   .status-badge__dot,

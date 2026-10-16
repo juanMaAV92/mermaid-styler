@@ -26,6 +26,8 @@ const messages = {
   stateReady: 'Ready',
   stateEmpty: 'Empty',
   stateRendering: 'Rendering',
+  editing: 'Editing…',
+  lastValidStamp: 'Last valid',
   stateInvalid: 'Invalid Mermaid',
   stateTimeout: 'Timed out',
   statusAnnounce: 'Preview state',

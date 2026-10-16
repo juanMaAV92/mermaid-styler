@@ -10,7 +10,7 @@ type ThemeControlsOptions = {
   presetList?: HTMLElement | null;
   presetButtons: HTMLButtonElement[];
   textSizeInput?: HTMLInputElement | null;
-  textSizeOutput?: HTMLOutputElement | null;
+  textSizeOutput?: HTMLElement | null;
   fontSelect?: HTMLSelectElement | null;
   transparentToggle?: HTMLInputElement | null;
   resetButton?: HTMLButtonElement | null;
@@ -156,7 +156,7 @@ export const initThemeControls = ({
   textSizeInput?.addEventListener('input', () => {
     const value = `${textSizeInput.value}px`;
     workbench.style.setProperty('--diagram-font-size', value);
-    if (textSizeOutput) textSizeOutput.value = value;
+    if (textSizeOutput) textSizeOutput.textContent = value;
     markCustom();
     onChange();
   });
@@ -171,7 +171,7 @@ export const initThemeControls = ({
     applyPreset(DEFAULT_PRESET_ID);
     if (fontSelect) fontSelect.selectedIndex = 0;
     if (textSizeInput) textSizeInput.value = String(DEFAULT_DIAGRAM_FONT_SIZE);
-    if (textSizeOutput) textSizeOutput.value = `${DEFAULT_DIAGRAM_FONT_SIZE}px`;
+    if (textSizeOutput) textSizeOutput.textContent = `${DEFAULT_DIAGRAM_FONT_SIZE}px`;
     workbench.style.setProperty('--diagram-font', DEFAULT_DIAGRAM_FONT_FAMILY);
     workbench.style.setProperty('--diagram-font-size', `${DEFAULT_DIAGRAM_FONT_SIZE}px`);
     if (transparentToggle) transparentToggle.checked = false;

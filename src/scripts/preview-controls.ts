@@ -1,7 +1,7 @@
 type PreviewControlsOptions = {
   viewport?: HTMLElement | null;
   layer?: HTMLElement | null;
-  zoom?: HTMLOutputElement | null;
+  zoom?: HTMLElement | null;
   actions: HTMLButtonElement[];
 };
 
@@ -22,7 +22,7 @@ export const initPreviewControls = ({ viewport, layer, zoom, actions }: PreviewC
     layer.style.setProperty('--preview-scale', String(previewScale));
     layer.style.setProperty('--preview-pan-x', `${previewPanX}px`);
     layer.style.setProperty('--preview-pan-y', `${previewPanY}px`);
-    if (zoom) zoom.value = `${Math.round(previewScale * 100)}%`;
+    if (zoom) zoom.textContent = `${Math.round(previewScale * 100)}%`;
   };
 
   const fit = () => {

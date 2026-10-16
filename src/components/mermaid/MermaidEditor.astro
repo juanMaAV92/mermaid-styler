@@ -25,7 +25,7 @@ const { source, sourceHint, placeholder, labels } = Astro.props;
     </div>
     <span class="panel-meta" data-source-count>0 {labels.sourceCount}</span>
   </div>
-  <div class="source-feedback" data-source-feedback hidden role="alert">
+  <div class="source-feedback" id="source-feedback" data-source-feedback hidden>
     <strong data-source-feedback-title>{labels.errorDetails}</strong>
     <pre class="source-feedback__body" data-source-feedback-body>{labels.errorFallback}</pre>
     <button type="button" class="source-feedback__action" data-go-to-line hidden></button>

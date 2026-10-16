@@ -1,5 +1,5 @@
 import { formatMessage } from '../i18n/format';
-import type { RenderState } from '../lib/ui/render-state';
+import { RENDERING_OVERLAY_DELAY_MS, type RenderState } from '../lib/ui/render-state';
 
 export type RenderStateOptions = {
   message?: string;
@@ -7,6 +7,8 @@ export type RenderStateOptions = {
   title?: string;
   line?: number;
   hasArtifact?: boolean;
+  /** Neutral "editing" indicator: a render error is pending reveal and must not be shown or announced yet. */
+  editing?: boolean;
 };
 
 type RenderStateMessages = {
@@ -23,6 +25,7 @@ type RenderStateMessages = {
   statusAnnounce: string;
   errorFallback: string;
   goToLine: string;
+  editing: string;
 };
 
 type RenderStateControllerOptions = {
@@ -31,7 +34,7 @@ type RenderStateControllerOptions = {
   stageStatus?: HTMLElement | null;
   stageCaption?: HTMLElement | null;
   stageStateViews: HTMLElement[];
-  stageNotices: HTMLElement[];
+  lastValidStamp?: HTMLElement | null;
   sourceFeedback?: HTMLElement | null;
   sourceFeedbackTitle?: HTMLElement | null;
   sourceFeedbackBody?: HTMLElement | null;
@@ -42,13 +45,20 @@ type RenderStateControllerOptions = {
   messages: RenderStateMessages;
 };
 
+export const RENDERING_OVERLAY_CLASS = 'stage-rendering-overlay';
+
+/** Writes to the single live region only when the text actually changes, so each distinct message is announced once. */
+export const announce = (liveStatus: HTMLElement | null | undefined, text: string) => {
+  if (liveStatus && liveStatus.textContent !== text) liveStatus.textContent = text;
+};
+
 export const createRenderStateController = ({
   workbench,
   stage,
   stageStatus,
   stageCaption,
   stageStateViews,
-  stageNotices,
+  lastValidStamp,
   sourceFeedback,
   sourceFeedbackTitle,
   sourceFeedbackBody,
@@ -65,28 +75,56 @@ export const createRenderStateController = ({
     error: { label: messages.stateInvalid, caption: messages.invalidStateHint },
     timeout: { label: messages.stateTimeout, caption: messages.timeoutStateHint },
   };
+  let overlayTimer: ReturnType<typeof setTimeout> | undefined;
+
+  const clearOverlay = () => {
+    if (overlayTimer) clearTimeout(overlayTimer);
+    overlayTimer = undefined;
+    stage?.classList.remove(RENDERING_OVERLAY_CLASS);
+  };
 
   const setRenderState = (state: RenderState, options: RenderStateOptions = {}) => {
     if (options.hasArtifact !== undefined) workbench.dataset.hasArtifact = String(options.hasArtifact);
 
     const hasArtifact = workbench.dataset.hasArtifact === 'true';
     const isError = state === 'error' || state === 'timeout';
-    const baseState = isError ? (hasArtifact ? 'ready' : 'empty') : state;
+    const isRendering = state === 'rendering';
+    const editing = Boolean(options.editing);
+    const keepsArtifactView = isError || editing || (isRendering && hasArtifact);
+    const baseState = keepsArtifactView ? (hasArtifact ? 'ready' : 'empty') : state;
     const copy = stateCopy[state];
+    const label = editing ? messages.editing : copy.label;
 
     workbench.dataset.renderState = state;
     if (stage) stage.dataset.renderState = state;
     stageStateViews.forEach((view) => { view.hidden = view.dataset.stateView !== baseState; });
-    stageNotices.forEach((notice) => { notice.hidden = notice.dataset.stateNotice !== state || !isError; });
-    if (stageStatus) stageStatus.textContent = copy.label;
-    if (stageCaption) stageCaption.textContent = options.message ?? copy.caption;
+    if (lastValidStamp) lastValidStamp.hidden = !(isError && hasArtifact);
+    if (stageStatus) stageStatus.textContent = label;
+    if (stageCaption) stageCaption.textContent = options.message ?? (editing ? (hasArtifact ? messages.readyState : messages.emptyState) : copy.caption);
+
+    // The overlay dims the previous artifact only once a render has been pending for a while;
+    // every new request restarts the countdown so continuous typing never dims the preview.
+    if (isRendering && hasArtifact && !editing) {
+      if (!stage?.classList.contains(RENDERING_OVERLAY_CLASS)) {
+        if (overlayTimer) clearTimeout(overlayTimer);
+        overlayTimer = setTimeout(() => {
+          overlayTimer = undefined;
+          stage?.classList.add(RENDERING_OVERLAY_CLASS);
+        }, RENDERING_OVERLAY_DELAY_MS);
+      }
+    } else {
+      clearOverlay();
+    }
 
     if (stateBadge) {
-      stateBadge.textContent = copy.label;
+      stateBadge.textContent = label;
       stateBadge.classList.toggle('status-badge--active', state === 'ready');
       stateBadge.classList.toggle('status-badge--warning', isError);
     }
-    if (liveStatus) liveStatus.textContent = `${messages.statusAnnounce}: ${copy.label}. ${options.message ?? copy.caption}`;
+    // Rendering and editing are transient; only settled states reach the live region.
+    if (!isRendering && !editing) {
+      announce(liveStatus, `${messages.statusAnnounce}: ${copy.label}. ${options.message ?? copy.caption}`);
+    }
 
     if (sourceFeedback) sourceFeedback.hidden = !isError;
     if (sourceFeedbackTitle) sourceFeedbackTitle.textContent = options.title ?? copy.label;
@@ -105,7 +143,7 @@ export const createRenderStateController = ({
       }
     }
 
-    const canUseArtifact = hasArtifact && state !== 'empty' && state !== 'rendering';
+    const canUseArtifact = hasArtifact && state !== 'empty';
     actionButtons.forEach((button) => { button.disabled = !canUseArtifact; });
   };
 
