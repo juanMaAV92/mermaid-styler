@@ -128,7 +128,7 @@ input:focus-visible {
   border-radius: var(--radius-sm);
   color: var(--steel);
   font-family: var(--font-code);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.045em;
   text-transform: uppercase;
   white-space: nowrap;
@@ -309,7 +309,8 @@ input:focus-visible {
 
 .workbench {
   display: grid;
-  grid-template-columns: minmax(270px, 0.8fr) minmax(360px, 1.25fr) minmax(230px, 0.5fr);
+  /* Editor <= 34%, preview >= 48% of the row. */
+  grid-template-columns: minmax(250px, 0.68fr) minmax(480px, 1.5fr) minmax(230px, 0.62fr);
   min-height: 0;
   padding: var(--space-5);
   gap: var(--space-3);
@@ -362,7 +363,7 @@ input:focus-visible {
   margin-bottom: 5px;
   color: var(--steel);
   font-family: var(--font-code);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.13em;
 }
@@ -383,7 +384,7 @@ input:focus-visible {
 .stage-status {
   color: var(--steel);
   font-family: var(--font-code);
-  font-size: 10px;
+  font-size: 11px;
   white-space: nowrap;
 }
 
@@ -460,7 +461,7 @@ input:focus-visible {
 
 .source-feedback strong {
   font-family: var(--font-code);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -475,8 +476,10 @@ input:focus-visible {
 }
 
 .artifact-stage {
+  display: flex;
+  flex-direction: column;
   min-height: 0;
-  padding: var(--space-5);
+  padding: 0;
   background: var(--diagram-surface, var(--paper));
   transition: background var(--motion-base) var(--ease-out);
 }
@@ -494,14 +497,16 @@ input:focus-visible {
 
 .stage-surface {
   position: relative;
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
   width: 100%;
-  height: 100%;
-  min-height: 500px;
-  padding: var(--space-6);
-  border: var(--border-thin) solid rgba(11, 15, 20, 0.12);
-  background: rgba(244, 241, 232, 0.6);
+  min-height: 0;
+  padding: var(--space-4);
+  border: 0;
+  background: transparent;
 }
 
 .stage-state {
@@ -530,6 +535,7 @@ input:focus-visible {
 }
 
 .stage-state--empty {
+  margin-block: auto;
   min-height: 120px;
   align-content: center;
 }
@@ -548,27 +554,45 @@ input:focus-visible {
 }
 
 .stage-state--rendering {
+  margin-block: auto;
   min-height: 120px;
   align-content: center;
 }
 
 .stage-state--ready {
+  flex: 0 1 auto;
   width: 100%;
   max-width: none;
   min-height: 0;
   align-content: stretch;
 }
 
+.stage-state--ready:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+}
+
+.preview-stage {
+  position: relative;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  width: 100%;
+  /* Bounded on desktop so the zoom controls stay above the fold. */
+  height: clamp(420px, calc(100vh - 300px), 760px);
+  height: clamp(420px, calc(100dvh - 300px), 760px);
+}
+
 .preview-viewport {
   position: relative;
   display: grid;
   place-items: center;
+  flex: 1;
   width: 100%;
-  min-height: 420px;
+  min-height: 0;
   overflow: hidden;
-  border: var(--border-thin) solid rgba(11, 15, 20, 0.08);
+  border: 0;
   background: rgba(244, 241, 232, 0.32);
-  height: clamp(420px, calc(100vh - 420px), 760px);
   cursor: grab;
   isolation: isolate;
   /* Vertical one-finger swipes scroll the page; pinch and two-finger pan are handled in preview-controls. */
@@ -599,16 +623,23 @@ input:focus-visible {
 }
 
 .preview-pan-hint {
+  display: none;
   position: absolute;
-  right: var(--space-3);
+  left: var(--space-3);
   bottom: var(--space-3);
   padding: 4px 6px;
   color: var(--diagram-border);
   background: rgba(244, 241, 232, 0.78);
   font-family: var(--font-code);
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 0.03em;
   pointer-events: none;
+}
+
+@media (pointer: fine) {
+  .preview-viewport:is(:hover, :focus-visible) .preview-pan-hint {
+    display: block;
+  }
 }
 
 .preview-large-hint {
@@ -636,11 +667,18 @@ input:focus-visible {
 }
 
 .preview-controls {
+  position: absolute;
+  right: var(--space-3);
+  bottom: var(--space-3);
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-1);
-  margin-top: var(--space-3);
+  padding: var(--space-1);
+  border: var(--border-thin) solid rgba(11, 15, 20, 0.16);
+  border-radius: var(--radius-sm);
+  background: rgba(244, 241, 232, 0.88);
 }
 
 .preview-control,
@@ -660,7 +698,7 @@ input:focus-visible {
 }
 
 .preview-fit {
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -675,7 +713,7 @@ input:focus-visible {
   min-width: 46px;
   color: var(--diagram-border);
   font-family: var(--font-code);
-  font-size: 10px;
+  font-size: 11px;
   text-align: center;
 }
 
@@ -741,7 +779,7 @@ input:focus-visible {
 [data-has-artifact="true"] .artifact-stage:is([data-render-state="error"], [data-render-state="timeout"]) .stage-surface::before,
 .artifact-stage.stage-rendering-overlay .stage-surface::before {
   position: absolute;
-  inset: -1px -1px auto;
+  inset: 0 0 auto;
   z-index: 1;
   height: 2px;
   content: "";
@@ -767,14 +805,7 @@ input:focus-visible {
 }
 
 .stage-alternative {
-  position: absolute;
-  inset: auto var(--space-4) var(--space-3);
   margin: 0;
-  color: var(--diagram-border);
-  font-family: var(--font-code);
-  font-size: 9px;
-  line-height: 1.4;
-  text-align: center;
 }
 
 @keyframes stage-spin {
@@ -783,17 +814,14 @@ input:focus-visible {
   }
 }
 
-.artifact-stage.is-transparent .stage-surface {
-  background: rgba(244, 241, 232, 0.55);
-}
 
 .stage-caption {
   justify-content: center;
   gap: var(--space-2);
-  margin-top: var(--space-5);
+  margin-top: var(--space-2);
   color: var(--diagram-border);
   font-family: var(--font-code);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.04em;
   text-align: center;
 }
@@ -828,7 +856,7 @@ input:focus-visible {
   padding: 0;
   color: var(--steel);
   font-family: var(--font-code);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -909,7 +937,7 @@ input:focus-visible {
 .range-field [data-text-size] {
   color: var(--steel);
   font-family: var(--font-code);
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .select-field,
@@ -929,7 +957,7 @@ input:focus-visible {
 
 .toggle-field__copy small {
   color: var(--steel);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.35;
 }
 
@@ -1025,7 +1053,7 @@ input:focus-visible {
   border-top: var(--border-thin) solid var(--line);
   color: var(--steel);
   font-family: var(--font-code);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.03em;
 }
 
@@ -1137,24 +1165,36 @@ input:focus-visible {
     min-height: 430px;
   }
 
+  .panel--artifact {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    height: 40vh;
+    height: 40dvh;
+    min-height: 220px;
+  }
+
+  .panel--artifact .panel-head {
+    padding-block: var(--space-2);
+  }
+
   .source-input {
     min-height: 300px;
     font-size: 16px;
   }
 
-  .panel--artifact {
-    min-height: auto;
-  }
-
   .stage-surface {
-    height: auto;
-    min-height: 420px;
-    padding: var(--space-4);
+    padding: var(--space-2);
   }
 
-  .preview-viewport {
-    min-height: 300px;
-    height: clamp(300px, 42vh, 420px);
+  .stage-state--ready {
+    flex: 1;
+  }
+
+  .preview-stage {
+    flex: 1;
+    height: auto;
+    min-height: 0;
   }
 
   .style-scroll {
@@ -1170,11 +1210,6 @@ input:focus-visible {
   .style-section:first-child {
     padding-top: 0;
     border-top: 0;
-  }
-
-  .stage-alternative {
-    position: static;
-    margin-top: var(--space-3);
   }
 
   .reset-button {
@@ -1210,6 +1245,12 @@ input:focus-visible {
   .caption-mark,
   .footer-rule {
     background: CanvasText;
+  }
+}
+
+@media (max-height: 500px) and (min-width: 821px) {
+  .preview-stage {
+    height: clamp(200px, calc(100dvh - 160px), 420px);
   }
 }
 

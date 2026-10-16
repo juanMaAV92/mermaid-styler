@@ -162,6 +162,48 @@ test.describe('Mermaid Styler workbench', () => {
     expect(horizontalOverflow).toBe(false);
   });
 
+  test('UI: no UI text below 11px', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', 'ready', { timeout: 10_000 });
+    await expect(page.locator('[data-svg-host] svg')).toBeVisible();
+    await page.locator('[data-preview-viewport]').hover();
+    const offenders = await page.evaluate(() => {
+      const bad: string[] = [];
+      document.querySelectorAll<HTMLElement>('.panel *, .topbar *').forEach((el) => {
+        if (el.closest('[data-svg-host]') || el.closest('.sr-only') || el.classList.contains('sr-only')) return;
+        const own = Array.from(el.childNodes).some((n) => n.nodeType === Node.TEXT_NODE && n.textContent?.trim());
+        if (!own) return;
+        const rect = el.getBoundingClientRect();
+        const style = getComputedStyle(el);
+        if (style.display === 'none' || style.visibility === 'hidden' || (rect.width === 0 && rect.height === 0)) return;
+        if (parseFloat(style.fontSize) < 11) bad.push(`${el.className || el.tagName}: ${style.fontSize}`);
+      });
+      return bad;
+    });
+    expect(offenders).toEqual([]);
+  });
+
+  test('UI: on mobile the preview is visible while styling', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+    await expect(page.locator('[data-svg-host] svg')).toBeVisible({ timeout: 10_000 });
+    await page.locator('#primary-color').scrollIntoViewIfNeeded();
+    const box = await page.locator('[data-preview-viewport]').boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.y + box!.height).toBeGreaterThan(0);
+    expect(box!.y).toBeLessThan(844);
+    expect(box!.height).toBeGreaterThan(200);
+  });
+
+  test('UI: no horizontal overflow at 320 and 390', async ({ page }) => {
+    for (const width of [320, 390]) {
+      await page.setViewportSize({ width, height: 700 });
+      await page.goto('/');
+      await expect(page.locator('[data-svg-host] svg')).toBeVisible({ timeout: 10_000 });
+      expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
+    }
+  });
+
   test('exports a valid PNG from the mobile layout', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/');
@@ -433,7 +475,7 @@ test.describe('Mermaid Styler workbench', () => {
     await page.goto('/');
     await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', 'ready', { timeout: 10_000 });
     await expect.poll(() => page.locator('[data-preview-layer]').evaluate((element) => Number(element.style.getPropertyValue('--preview-scale'))))
-      .toBeLessThan(0.5);
+      .toBeLessThan(0.6);
     await expect(page.locator('[data-preview-large-hint]')).toBeHidden();
   });
 
