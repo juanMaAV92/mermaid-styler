@@ -3,6 +3,7 @@ import {
   MANUAL_MAX_SCALE,
   MAX_SCALE,
   clampScale,
+  computeFitPan,
   computeFitScale,
   computePanLimit,
   hasSignificantSizeChange,
@@ -29,6 +30,24 @@ describe('computeFitScale', () => {
     expect(computeFitScale({ width: 10, height: -5 }, viewport)).toBe(1);
     expect(computeFitScale({ width: NaN, height: 10 }, viewport)).toBe(1);
     expect(computeFitScale({ width: Infinity, height: 10 }, viewport)).toBe(1);
+  });
+});
+
+describe('fit with a bottom inset (M3)', () => {
+  it('M3: fits into the height left above the inset', () => {
+    // 800×600 viewport, 100px reserved at the bottom → height-bound by 500.
+    expect(computeFitScale({ width: 400, height: 1000 }, viewport, 100)).toBeCloseTo((500 / 1000) * 0.9, 5);
+    expect(computeFitScale({ width: 400, height: 1000 }, viewport)).toBeCloseTo((600 / 1000) * 0.9, 5);
+  });
+  it('M3: ignores invalid or oversized insets', () => {
+    expect(computeFitScale({ width: 400, height: 1000 }, viewport, -50)).toBeCloseTo(0.54, 5);
+    expect(computeFitScale({ width: 400, height: 1000 }, viewport, Number.NaN)).toBeCloseTo(0.54, 5);
+    expect(computeFitScale({ width: 400, height: 1000 }, viewport, 600)).toBeCloseTo(0.54, 5);
+  });
+  it('M3: centres the fitted diagram in the area above the inset', () => {
+    expect(computeFitPan(viewport, 100)).toEqual({ x: 0, y: -50 });
+    expect(computeFitPan(viewport, 0)).toEqual({ x: 0, y: 0 });
+    expect(computeFitPan(viewport, 600)).toEqual({ x: 0, y: 0 });
   });
 });
 

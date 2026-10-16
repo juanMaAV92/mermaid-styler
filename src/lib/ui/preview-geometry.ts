@@ -28,11 +28,27 @@ function isPositiveFinite(n: number): boolean {
   return Number.isFinite(n) && n > 0;
 }
 
-export function computeFitScale(content: Size, viewport: Size): number {
+/**
+ * M3: usable bottom inset (px) reserved for floating controls. Invalid values, or an inset that would take half
+ * the viewport or more, are ignored so a tiny viewport still gets a sensible fit.
+ */
+function usableInset(viewport: Size, bottomInset: number): number {
+  return isPositiveFinite(bottomInset) && bottomInset < viewport.height / 2 ? bottomInset : 0;
+}
+
+/** Fit scale (D6); `bottomInset` px at the bottom of the viewport are kept free for the zoom controls (M3). */
+export function computeFitScale(content: Size, viewport: Size, bottomInset = 0): number {
   if (!isPositiveFinite(content.width) || !isPositiveFinite(content.height)) return 1;
+  const height = viewport.height - usableInset(viewport, bottomInset);
   const raw =
-    Math.min(viewport.width / content.width, viewport.height / content.height) * FIT_PADDING_RATIO;
+    Math.min(viewport.width / content.width, height / content.height) * FIT_PADDING_RATIO;
   return Number.isFinite(raw) ? clampScale(raw) : 1;
+}
+
+/** Pan after Fit: centre the diagram in the area above the bottom inset (M3). */
+export function computeFitPan(viewport: Size, bottomInset = 0): Point {
+  const inset = usableInset(viewport, bottomInset);
+  return { x: 0, y: inset > 0 ? -inset / 2 : 0 };
 }
 
 export function computePanLimit(content: Size, viewport: Size, scale: number): Point {

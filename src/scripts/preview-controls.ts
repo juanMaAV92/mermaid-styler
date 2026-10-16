@@ -1,6 +1,7 @@
 import {
   MANUAL_MAX_SCALE,
   clampScale,
+  computeFitPan,
   computeFitScale,
   computePanLimit,
   isLargeDiagram,
@@ -16,6 +17,8 @@ type PreviewControlsOptions = {
   layer?: HTMLElement | null;
   zoom?: HTMLElement | null;
   largeDiagramHint?: HTMLElement | null;
+  /** Floating zoom controls over the viewport; Fit keeps the area they cover free (M3). */
+  controls?: HTMLElement | null;
   /** Theme font size in px; with the scale it gives the effective on-screen text size. */
   getFontSize?: () => number;
   actions: HTMLButtonElement[];
@@ -43,6 +46,7 @@ export const initPreviewControls = ({
   layer,
   zoom,
   largeDiagramHint,
+  controls,
   getFontSize,
   actions,
 }: PreviewControlsOptions): PreviewControls => {
@@ -57,6 +61,15 @@ export const initPreviewControls = ({
 
   const getSvg = () => layer?.querySelector<SVGSVGElement>('svg') ?? undefined;
   const viewportSize = (): Size => ({ width: viewport?.clientWidth ?? 0, height: viewport?.clientHeight ?? 0 });
+
+  /** Height of the viewport bottom band covered by the floating controls (0 when they do not overlap it). */
+  const controlsInset = (): number => {
+    if (!viewport || !controls) return 0;
+    const viewportRect = viewport.getBoundingClientRect();
+    const controlsRect = controls.getBoundingClientRect();
+    if (controlsRect.height <= 0 || controlsRect.top >= viewportRect.bottom) return 0;
+    return Math.max(0, viewportRect.bottom - controlsRect.top);
+  };
 
   const contentSize = (): Size | undefined => {
     const svg = getSvg();
@@ -122,8 +135,9 @@ export const initPreviewControls = ({
       return;
     }
     fitPending = false;
-    scale = content ? computeFitScale(content, size) : 1;
-    pan = { x: 0, y: 0 };
+    const inset = controlsInset();
+    scale = content ? computeFitScale(content, size, inset) : 1;
+    pan = content ? computeFitPan(size, inset) : { x: 0, y: 0 };
     fitted = true;
     applyTransform();
   };

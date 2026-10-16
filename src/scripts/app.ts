@@ -29,6 +29,7 @@ if (workbench) {
   const svgHost = workbench.querySelector<HTMLElement>('[data-svg-host]');
   const previewViewport = workbench.querySelector<HTMLElement>('[data-preview-viewport]');
   const previewLayer = workbench.querySelector<HTMLElement>('[data-preview-layer]');
+  const previewControlsBar = workbench.querySelector<HTMLElement>('[data-preview-controls]');
   const previewZoom = workbench.querySelector<HTMLElement>('[data-preview-zoom]');
   const previewLargeHint = workbench.querySelector<HTMLElement>('[data-preview-large-hint]');
   const previewActions = [...workbench.querySelectorAll<HTMLButtonElement>('[data-preview-action]')];
@@ -93,6 +94,7 @@ if (workbench) {
     layer: previewLayer,
     zoom: previewZoom,
     largeDiagramHint: previewLargeHint,
+    controls: previewControlsBar,
     getFontSize: () => getDiagramFontSize(),
     actions: previewActions,
   });

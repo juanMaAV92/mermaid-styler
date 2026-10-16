@@ -760,7 +760,7 @@ input:focus-visible {
   left: var(--space-4);
   z-index: 1;
   padding: 2px 6px;
-  border: var(--border-thin) solid var(--ember);
+  border: var(--border-thin) solid var(--ember-ink);
   color: var(--ember-ink);
   background: rgba(244, 241, 232, 0.94);
   font-family: var(--font-code);
@@ -787,7 +787,7 @@ input:focus-visible {
 }
 
 [data-has-artifact="true"] .artifact-stage:is([data-render-state="error"], [data-render-state="timeout"]) .stage-surface::before {
-  background: var(--ember);
+  background: var(--ember-ink);
 }
 
 [data-has-artifact="true"] .artifact-stage:is([data-render-state="error"], [data-render-state="timeout"]) .rendered-diagram > svg {

@@ -107,13 +107,19 @@ test.describe('Mermaid Styler workbench', () => {
     if (!box) throw new Error('Preview viewport has no bounding box.');
     const centerX = box.x + box.width / 2;
     const centerY = box.y + box.height / 2;
+    const readPan = (axis: 'x' | 'y') => layer.evaluate(
+      (element, name) => Number.parseFloat(getComputedStyle(element).getPropertyValue(`--preview-pan-${name}`)) || 0,
+      axis,
+    );
+    // M3: Fit centres the diagram above the floating zoom controls, so the starting pan may be non-zero.
+    const startPan = { x: await readPan('x'), y: await readPan('y') };
     await page.mouse.move(centerX, centerY);
     await page.mouse.down();
     await page.mouse.move(centerX + 48, centerY + 24);
     await page.mouse.up();
 
-    await expect.poll(() => layer.evaluate((element) => getComputedStyle(element).getPropertyValue('--preview-pan-x').trim())).toBe('48px');
-    await expect.poll(() => layer.evaluate((element) => getComputedStyle(element).getPropertyValue('--preview-pan-y').trim())).toBe('24px');
+    await expect.poll(() => readPan('x')).toBeCloseTo(startPan.x + 48, 3);
+    await expect.poll(() => readPan('y')).toBeCloseTo(startPan.y + 24, 3);
 
     await viewport.focus();
     await viewport.press('0');
@@ -496,6 +502,22 @@ test.describe('Mermaid Styler workbench', () => {
     }
     await expect(page.locator('.topbar-actions button:visible')).toHaveCount(4);
   });
+
+  for (const size of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) {
+    test(`M3: Fit keeps a tall diagram clear of the zoom controls at ${size.width}px`, async ({ page }) => {
+      await page.setViewportSize(size);
+      await page.goto('/');
+      await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', 'ready', { timeout: 10_000 });
+      const tall = ['flowchart TD', ...Array.from({ length: 12 }, (_, i) => `  N${i} --> N${i + 1}`)].join('\n');
+      await page.locator('[data-source-input]').fill(tall);
+      await expect(page.locator('[data-svg-host] svg g.node')).toHaveCount(13, { timeout: 10_000 });
+      await page.getByRole('button', { name: 'Fit' }).click();
+      const svgBox = await page.locator('[data-svg-host] svg').boundingBox();
+      const controlsBox = await page.locator('[data-preview-controls]').boundingBox();
+      expect(svgBox && controlsBox).toBeTruthy();
+      expect(svgBox!.y + svgBox!.height).toBeLessThanOrEqual(controlsBox!.y + 1);
+    });
+  }
 
   test('AUD-021: export actions are unambiguous on mobile', async ({ page, context, baseURL }) => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: baseURL });
