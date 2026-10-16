@@ -2,9 +2,10 @@
 
 The versioned Dockerfile builds with Node 22.19.0 and `npm ci`, checks types and
 bundle size, then copies only `dist/` into Nginx. No Node runtime, database,
-volume, secrets or Mermaid source storage is needed in production. Image tags
-are explicit; the lockfile fixes npm dependency versions. Review base-image
-updates regularly; tags are not immutable digest pins.
+volume, secrets or Mermaid source storage is needed in production. Base images
+are pinned by digest (`tag@sha256:...`); when bumping a base image, update the
+tag and the digest together. The lockfile fixes npm dependency versions.
+Dependabot proposes base-image and action updates weekly.
 
 ## Dokploy
 
@@ -21,6 +22,10 @@ For the existing application select:
 | Container port | `8080` |
 | HTTPS | Let's Encrypt, terminated at Traefik |
 | Health probe | GET `/healthz`, expected `200` and `ok` |
+
+> **Warning:** this image listens on `8080` (nginx-unprivileged). The container
+> port in Dokploy must change from `80` to `8080` in the same deploy that ships
+> this image; otherwise Traefik routes to a closed port and the site returns 502.
 
 Publish Directory is not used in Dockerfile mode. Remove redundant build/start
 overrides; the Dockerfile owns these. No Railpack Node environment variable is
@@ -60,6 +65,10 @@ The deployment CI job builds this image and checks headers, caching, health,
 ```sh
 npm run check:deployment -- https://mermaid-styler.duckdns.org
 ```
+
+The `Post-deploy check` GitHub workflow runs this check plus the browser smoke
+against production (manually via `workflow_dispatch` and daily). It fails until
+the Dokploy migration above has been applied.
 
 Check a new diagram, invalid source, SVG/PNG and clipboard over HTTPS in a clean
 browser session. Verify the certificate and container health in Dokploy. If the
