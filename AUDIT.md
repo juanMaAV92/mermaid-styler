@@ -2,9 +2,9 @@
 
 **Fecha:** 2026-10-08 (re-auditoría 2026-10-15)
 **Estado:** Hitos 1 y 2 integrados en `main` (PR #3–#5). Re-auditoría 2026-10-15
-remediada en `fix/audit-2026-10-15` (2026-10-16): AUD-013, 015–021 resueltos;
-AUD-009, 010 y 014 pendientes de despliegue/verificación del owner tras el merge
-(Dokploy ya usa Dockerfile y puerto `8080`). Gates: 215 unitarias, 68 E2E Chromium, 8 smoke Firefox/WebKit, typecheck, lint, build y budget de bundle correctos (Node 22.19.0).
+remediada en el PR #7 (2026-10-16): AUD-013, 015–021 resueltos; AUD-009, 010
+y 014 resueltos tras el despliegue en Dokploy (Dockerfile, puerto `8080`,
+`check:deployment` correcto contra el dominio). Gates: 215 unitarias, 68 E2E Chromium, 8 smoke Firefox/WebKit, typecheck, lint, build y budget de bundle correctos (Node 22.19.0).
 **Alcance:** escalabilidad, mantenibilidad, deuda técnica, seguridad preventiva,
 calidad de UI y operación del sitio estático.
 
@@ -63,7 +63,7 @@ herramienta de forma amplia para uso comunitario.
 | Escalabilidad de tráfico | Fuerte | Hosting estático, sin backend, BD ni procesamiento remoto |
 | Escalabilidad de render en navegador | Media | Render Mermaid, parseo y export PNG compiten por CPU/RAM del dispositivo |
 | Mantenibilidad | Alta | Tipos, módulos y tests presentes; tema y estado ya no acoplan el orquestador |
-| Operación y release | Media-alta | Docker/CI/headers validados localmente; adopción en Dokploy pendiente |
+| Operación y release | Alta | Dokploy despliega el Dockerfile; headers y cache verificados en el dominio público |
 | Privacidad | Buena | No se hacen requests externos y el source no se incrusta en SVG salvo elección explícita |
 
 ## Evidencia verificada
@@ -211,7 +211,7 @@ No se identificaron bloqueantes actuales.
 
 #### AUD-014 — Producción sin contrato de headers
 
-- **Estado:** pendiente de despliegue/verificación del owner. El contrato está en la rama (`a9007bd`, `3c105a1`) y Dokploy ya usa Dockerfile y puerto `8080`; verificar tras el merge con `npm run check:deployment -- https://mermaid-styler.duckdns.org`.
+- **Estado:** resuelto 2026-10-16 (`a9007bd`, `3c105a1`, PR #7). `npm run check:deployment -- https://mermaid-styler.duckdns.org` pasó el 2026-10-16 (HTML, asset, health y 404) tras desplegar el PR #7 en Dokploy (Dockerfile, puerto `8080`).
 - **Estado original:** abierto 2026-10-15.
 - **Ubicación:** servicio Dokploy en producción; `deploy/nginx.conf`.
 - **Evidencia:** curl 2026-10-15: sin CSP header, X-Frame-Options, Referrer-Policy ni Cache-Control; `/nope` y `/healthz` devuelven 200 con `index.html`. La meta-CSP no admite `frame-ancestors`, por lo que no hay protección de clickjacking.
@@ -305,7 +305,7 @@ No se identificaron bloqueantes actuales.
 
 #### AUD-009 — Despliegue no totalmente reproducible desde Git
 
-- **Estado:** pendiente de despliegue/verificación del owner. Dokploy ya está en Build Type = Dockerfile y puerto `8080`; verificar tras el merge con `npm run check:deployment -- https://mermaid-styler.duckdns.org`.
+- **Estado:** resuelto 2026-10-16. Dokploy construye desde el Dockerfile del repo (Build Type = Dockerfile, puerto `8080`); `npm run check:deployment -- https://mermaid-styler.duckdns.org` pasó el 2026-10-16 (HTML, asset, health y 404) tras desplegar el PR #7 en Dokploy (Dockerfile, puerto `8080`).
 - **Ubicación:** `package.json`, `README.md`, configuración de Dokploy.
 - **Evidencia:** Dockerfile multistage con Node 22.19.0 y Nginx 1.28.0,
   `npm ci`, health check `/healthz`, `.dockerignore` y `DEPLOYMENT.md`.
@@ -317,7 +317,7 @@ No se identificaron bloqueantes actuales.
 
 #### AUD-010 — Headers y cache sin contrato explícito
 
-- **Estado:** contrato validado en contenedor local; pendiente de despliegue/verificación del owner (verificar tras el merge con `npm run check:deployment -- https://mermaid-styler.duckdns.org`).
+- **Estado:** resuelto 2026-10-16. `npm run check:deployment -- https://mermaid-styler.duckdns.org` pasó el 2026-10-16 (HTML, asset, health y 404) tras desplegar el PR #7 en Dokploy (Dockerfile, puerto `8080`); CSP, `x-frame-options`, `nosniff`, `referrer-policy` y `cache-control: no-cache` presentes en el HTML.
 - **Ubicación:** `deploy/nginx.conf`, `scripts/check-deployment.mjs`.
 - **Evidencia:** CSP HTTP, nosniff, DENY y no-referrer se aplican incluso a 404.
   HTML revalidable y assets Astro immutable. El contrato se comprueba en CI
@@ -458,7 +458,7 @@ Estado 2026-10-16:
 
 ### Hito 3 — Operación abierta a comunidad
 
-**Implementación completa el 2026-10-08; cierre operativo pendiente.**
+**Implementación completa el 2026-10-08; cierre operativo el 2026-10-16** (Dokploy en Dockerfile, `check:deployment` correcto contra el dominio).
 
 Validar en GitHub CI tras abrir el PR. Después de integrar, cambiar Build Type
 a Dockerfile en Dokploy según `DEPLOYMENT.md` y ejecutar `check:deployment`
@@ -509,3 +509,4 @@ Después de modificar render/export, ejecutar además una prueba manual con:
 | 2026-10-08 | Correcciones transitivas compatibles y Node 22.19.0 | Sin hallazgos high; quedan 2 low de KaTeX/Mermaid |
 | 2026-10-15 | Re-auditoría: 4 P1 nuevos (AUD-013, 014, 016, 018), 5 P2 (AUD-015, 017, 019, 020, 021) | Plan docs/superpowers/plans/2026-10-15-audit-remediation.md |
 | 2026-10-16 | Cierre de la remediación: AUD-013 (incl. labels HTML), 015–021 resueltos; AUD-009/010/014 pendientes de despliegue del owner; export SVG con ancho fijo en px (`useMaxWidth: false`) | 215 unitarias, 68 E2E Chromium, 8 smoke Firefox/WebKit, typecheck, lint, build y budget de bundle correctos (Node 22.19.0) |
+| 2026-10-16 | Despliegue del PR #7 en Dokploy (Dockerfile, puerto 8080): AUD-009, 010 y 014 resueltos | `check:deployment` correcto contra https://mermaid-styler.duckdns.org; headers verificados con `curl -sSI` |
