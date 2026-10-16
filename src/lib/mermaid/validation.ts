@@ -2,10 +2,13 @@ import { MermaidRenderError } from './types';
 
 export const DEFAULT_MAX_SOURCE_LENGTH = 50_000;
 export const DEFAULT_MAX_SOURCE_LINES = 2_000;
-export const DEFAULT_MAX_CONNECTIONS = 1_200;
+export const MAX_EDGES = 500;
 export const DEFAULT_RENDER_TIMEOUT_MS = 8_000;
 
-const connectionPattern = /(?:-->|==>|-.->|-->>|->>|<-->|<--|---)/g;
+// Longer operators first so each edge yields exactly one match.
+const connectionPattern = /(?:<-->|-->>|-->|==>|-\.->|-\.-|->>|<--|--o|--x|---|~~~)/g;
+
+export const countConnections = (source: string): number => source.match(connectionPattern)?.length ?? 0;
 
 export const validateSource = (source: string, maxSourceLength = DEFAULT_MAX_SOURCE_LENGTH): string => {
   if (!source.trim()) {
@@ -27,11 +30,11 @@ export const validateSource = (source: string, maxSourceLength = DEFAULT_MAX_SOU
     );
   }
 
-  const connections = source.match(connectionPattern)?.length ?? 0;
-  if (connections > DEFAULT_MAX_CONNECTIONS) {
+  const connections = countConnections(source);
+  if (connections > MAX_EDGES) {
     throw new MermaidRenderError(
       'SOURCE_TOO_COMPLEX',
-      `The Mermaid source has too many connections to render safely (${DEFAULT_MAX_CONNECTIONS.toLocaleString()} maximum).`,
+      `The Mermaid source has too many connections to render safely (${MAX_EDGES.toLocaleString()} maximum).`,
     );
   }
 

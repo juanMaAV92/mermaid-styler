@@ -28,6 +28,7 @@ const fixtures = [
 
 const htmlLabelFlowchart = readFileSync(new URL('../fixtures/diagrams/html-label-flowchart.mmd', import.meta.url), 'utf8');
 const themeCssImageSet = readFileSync(new URL('../fixtures/adversarial/mermaid/themecss-image-set.mmd', import.meta.url), 'utf8');
+const edges501 = readFileSync(new URL('../fixtures/adversarial/mermaid/edges-501.mmd', import.meta.url), 'utf8');
 
 const waitForReady = async (page: Page, previousSvgMarkup?: string) => {
   if (previousSvgMarkup) {
@@ -151,6 +152,21 @@ test.describe('Mermaid Styler hardening', () => {
     await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', 'ready', { timeout: 10_000 });
     await expect(page.locator('[data-svg-host] svg')).toBeVisible();
     expect(externalRequests).toEqual([]);
+  });
+
+  test('AUD-016: 501 edges are rejected with the 500 limit and no long task', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('[data-source-input]').fill(edges501);
+    await page.evaluate(() => {
+      const w = window as unknown as { __longTasks: number[] };
+      w.__longTasks = [];
+      new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) w.__longTasks.push(entry.duration);
+      }).observe({ type: 'longtask', buffered: false });
+    });
+    await expect(page.locator('[data-source-feedback]')).toContainText(/500/, { timeout: 10_000 });
+    const longTasks = await page.evaluate(() => (window as unknown as { __longTasks: number[] }).__longTasks);
+    expect(longTasks.filter((d) => d > 100)).toEqual([]);
   });
 
   test('AUD-013: default secure keys stay protected', async ({ page }) => {

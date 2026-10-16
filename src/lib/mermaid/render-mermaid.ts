@@ -1,6 +1,6 @@
 import mermaid from 'mermaid';
 import { sanitizeSvg } from './sanitize-svg';
-import { DEFAULT_MAX_SOURCE_LENGTH, DEFAULT_RENDER_TIMEOUT_MS, validateSource } from './validation';
+import { DEFAULT_MAX_SOURCE_LENGTH, DEFAULT_RENDER_TIMEOUT_MS, MAX_EDGES, validateSource } from './validation';
 import { MermaidRenderError, type MermaidRenderResult, type RenderMermaidOptions } from './types';
 
 let renderSequence = 0;
@@ -67,6 +67,7 @@ export const renderMermaid = async (
       secure: [...MERMAID_SECURE_KEYS],
       theme: 'base',
       maxTextSize: maxSourceLength,
+      maxEdges: MAX_EDGES,
       themeVariables: {
         background: options.theme.transparent ? 'transparent' : options.theme.background,
         primaryColor: options.theme.primaryColor,
