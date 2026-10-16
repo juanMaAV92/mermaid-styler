@@ -30,6 +30,30 @@ const fixtures = [
 const htmlLabelFlowchart = readFileSync(new URL('../fixtures/diagrams/html-label-flowchart.mmd', import.meta.url), 'utf8');
 const themeCssImageSet = readFileSync(new URL('../fixtures/adversarial/mermaid/themecss-image-set.mmd', import.meta.url), 'utf8');
 const edges501 = readFileSync(new URL('../fixtures/adversarial/mermaid/edges-501.mmd', import.meta.url), 'utf8');
+const initPrimaryRed = readFileSync(new URL('../fixtures/adversarial/mermaid/init-primary-red.mmd', import.meta.url), 'utf8');
+const frontmatterPrimaryRed = readFileSync(new URL('../fixtures/adversarial/mermaid/frontmatter-primary-red.mmd', import.meta.url), 'utf8');
+
+const svgMarkup = (page: Page) => page.locator('[data-svg-host] svg').evaluate((svg) => svg.outerHTML);
+
+const firstNodeFill = (page: Page) => page.locator('[data-svg-host] svg g.node')
+  .first()
+  .locator('rect, polygon, path, circle')
+  .first()
+  .evaluate((shape) => getComputedStyle(shape).fill);
+
+const setPrimaryColor = async (page: Page, value: string) => {
+  await page.locator('#primary-color').evaluate((input, color) => {
+    const colorInput = input as HTMLInputElement;
+    colorInput.value = color;
+    colorInput.dispatchEvent(new Event('input', { bubbles: true }));
+  }, value);
+};
+
+const fillSourceAndWait = async (page: Page, source: string) => {
+  const before = await svgMarkup(page);
+  await page.locator('[data-source-input]').fill(source);
+  await waitForReady(page, before);
+};
 
 const waitForReady = async (page: Page, previousSvgMarkup?: string) => {
   if (previousSvgMarkup) {
@@ -266,6 +290,53 @@ test.describe('Mermaid Styler hardening', () => {
     expect(markup).not.toContain('evil.example');
     expect(markup).not.toContain('\\75 rl');
   });
+  for (const variant of [
+    { name: 'init directive', source: () => initPrimaryRed, sourceFill: 'rgb(255, 0, 0)' },
+    // `theme: dark` derives node fill from its own fixed mainBkg (#1f2020), not from primaryColor.
+    { name: 'YAML frontmatter config', source: () => frontmatterPrimaryRed, sourceFill: 'rgb(31, 32, 32)' },
+  ]) {
+    test(`D1: style rail wins over ${variant.name} by default`, async ({ page }) => {
+      await page.goto('/');
+      await waitForReady(page);
+      const notice = page.locator('[data-source-theme-notice]');
+      const toggle = page.getByRole('checkbox', { name: 'Use source theme' });
+      await expect(notice).toBeHidden();
+      await expect(toggle).not.toBeChecked();
+
+      await fillSourceAndWait(page, variant.source());
+      await expect(notice).toBeVisible();
+      await expect(notice).toHaveText('This source sets its own theme; your style settings take priority.');
+
+      let before = await svgMarkup(page);
+      await setPrimaryColor(page, '#00ff00');
+      await waitForReady(page, before);
+      await expect.poll(() => firstNodeFill(page)).toBe('rgb(0, 255, 0)');
+
+      before = await svgMarkup(page);
+      await toggle.check({ force: true });
+      await waitForReady(page, before);
+      await expect.poll(() => firstNodeFill(page)).toBe(variant.sourceFill);
+
+      await fillSourceAndWait(page, 'flowchart LR\n  A --> B');
+      await expect(notice).toBeHidden();
+    });
+  }
+
+  test('D1: non-theme init options still apply with the source theme off', async ({ page }) => {
+    const firstEdgePath = () => page.locator('[data-svg-host] svg .flowchart-link').first().getAttribute('d');
+    await page.goto('/');
+    await waitForReady(page);
+    await expect(page.getByRole('checkbox', { name: 'Use source theme' })).not.toBeChecked();
+    await fillSourceAndWait(page, 'flowchart TD\n  A --> B\n  A --> C\n  B --> D\n  C --> D');
+    const defaultCurve = await firstEdgePath();
+    await fillSourceAndWait(page, '%%{init: {"flowchart": {"curve": "linear"}}}%%\nflowchart TD\n  A --> B\n  A --> C\n  B --> D\n  C --> D');
+    const linearCurve = await firstEdgePath();
+    await fillSourceAndWait(page, '%%{init: {"flowchart": {"curve": "step"}}}%%\nflowchart TD\n  A --> B\n  A --> C\n  B --> D\n  C --> D');
+    const stepCurve = await firstEdgePath();
+    expect(defaultCurve).toBeTruthy();
+    expect(new Set([defaultCurve, linearCurve, stepCurve]).size).toBe(3);
+  });
+
   test('AUD-017: HTML label with <img> renders', async ({ page }) => {
     await page.goto('/');
     const before = await page.locator('[data-svg-host] svg').evaluate((svg) => svg.outerHTML);

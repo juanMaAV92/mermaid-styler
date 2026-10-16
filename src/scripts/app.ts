@@ -2,6 +2,7 @@ import messages from '../i18n/messages.en';
 import { formatRenderError } from '../lib/mermaid/format-error';
 import { MermaidRenderError } from '../lib/mermaid/types';
 import type { MermaidRenderResult, RenderMermaidOptions } from '../lib/mermaid/types';
+import { hasThemeDirective } from '../lib/mermaid/directives';
 import { LatestWinsRenderCoordinator } from '../lib/mermaid/render-coordinator';
 import { ERROR_REVEAL_MS, RENDER_DEBOUNCE_MS, isRenderState, type RenderState } from '../lib/ui/render-state';
 import { addSvgMetadata } from '../lib/export/svg';
@@ -42,6 +43,8 @@ if (workbench) {
   const textSizeOutput = workbench.querySelector<HTMLElement>('[data-text-size]');
   const fontSelect = workbench.querySelector<HTMLSelectElement>('[data-font-select]');
   const transparentToggle = workbench.querySelector<HTMLInputElement>('[data-transparent-toggle]');
+  const sourceThemeToggle = workbench.querySelector<HTMLInputElement>('[data-source-theme-toggle]');
+  const sourceThemeNotice = workbench.querySelector<HTMLElement>('[data-source-theme-notice]');
   const includeSourceToggle = workbench.querySelector<HTMLInputElement>('[data-include-source-toggle]');
   const resetButton = workbench.querySelector<HTMLButtonElement>('[data-reset-styles]');
   const sourceFeedback = workbench.querySelector<HTMLElement>('[data-source-feedback]');
@@ -219,6 +222,7 @@ if (workbench) {
       try {
         const outcome = await renderCoordinator.enqueue(source, {
           theme: themeControls.getMermaidThemeOptions(),
+          allowSourceTheme: sourceThemeToggle?.checked ?? false,
         });
 
         if (outcome.status === 'superseded' || requestToken !== renderRequestToken) return;
@@ -250,11 +254,19 @@ if (workbench) {
     if (sourceCount && sourceInput) sourceCount.textContent = `${sourceInput.value.length} ${messages.sourceCount}`;
   };
 
+  // D1: tell the author their source's theme is being overridden by the rail (not a live region by design).
+  const updateSourceThemeNotice = () => {
+    if (sourceThemeNotice) sourceThemeNotice.hidden = !hasThemeDirective(sourceInput?.value ?? '');
+  };
+
   sourceInput?.addEventListener('input', () => {
     lastSourceInputAt = performance.now();
     updateSourceCount();
+    updateSourceThemeNotice();
     requestRender();
   });
+
+  sourceThemeToggle?.addEventListener('change', () => requestRender());
 
   // Leaving the editor means the author has stopped typing: reveal any pending error right away.
   sourceInput?.addEventListener('blur', () => {
@@ -284,6 +296,7 @@ if (workbench) {
   });
 
   updateSourceCount();
+  updateSourceThemeNotice();
   actionButtons.forEach((button) => {
     button.addEventListener('click', () => {
       const menu = button.closest<HTMLElement>('[popover]');

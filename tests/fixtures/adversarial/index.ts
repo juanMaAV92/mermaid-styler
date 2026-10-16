@@ -23,4 +23,5 @@ export const adversarialFixtures: AdversarialFixture[] = [
   { id: 'themecss-image-set', file: 'mermaid/themecss-image-set.mmd', kind: 'mermaid', audit: 'AUD-013', mustNotContain: ['evil.example'], mustContain: [] },
   { id: 'edges-501', file: 'mermaid/edges-501.mmd', kind: 'mermaid', audit: 'AUD-016', mustNotContain: [], mustContain: [] },
   { id: 'init-primary-red', file: 'mermaid/init-primary-red.mmd', kind: 'mermaid', audit: 'AUD-021', mustNotContain: [], mustContain: [] },
+  { id: 'frontmatter-primary-red', file: 'mermaid/frontmatter-primary-red.mmd', kind: 'mermaid', audit: 'AUD-021', mustNotContain: [], mustContain: [] },
 ];

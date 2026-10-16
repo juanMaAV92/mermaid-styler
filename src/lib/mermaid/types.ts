@@ -12,6 +12,8 @@ export type MermaidThemeOptions = {
 
 export type RenderMermaidOptions = {
   theme: MermaidThemeOptions;
+  /** D1: let the source's `%%{init}%%` / frontmatter `theme` and `themeVariables` apply. Default false (rail wins). */
+  allowSourceTheme?: boolean;
   maxSourceLength?: number;
   timeoutMs?: number;
 };

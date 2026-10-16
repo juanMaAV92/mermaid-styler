@@ -990,7 +990,22 @@ input:focus-visible {
   position: relative;
   grid-template-columns: 1fr auto;
   align-items: center;
+  min-height: var(--control-target);
   cursor: pointer;
+}
+
+.source-theme-notice {
+  margin: var(--space-3) 0 0;
+  padding: var(--space-2) var(--space-3);
+  border-inline-start: var(--border-thin) solid var(--signal-cyan);
+  color: var(--steel-light);
+  background: var(--graphite-raised);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.source-theme-notice[hidden] {
+  display: none;
 }
 
 .toggle-field input {

@@ -39,3 +39,49 @@ describe('renderMermaid config', () => {
     }
   });
 });
+
+describe('renderMermaid source theme (D1)', () => {
+  beforeEach(() => initialize.mockClear());
+
+  it('D1: blocks source theme and themeVariables by default', async () => {
+    const { MERMAID_SECURE_KEYS, renderMermaid } = await import('../../src/lib/mermaid/render-mermaid');
+    await renderMermaid('flowchart LR\n  A --> B', { theme });
+    const config = initialize.mock.calls[0][0] as { secure: string[] };
+    expect(config.secure).toEqual([...MERMAID_SECURE_KEYS, 'theme', 'themeVariables']);
+  });
+
+  it('D1: allowSourceTheme keeps the base secure list (themeCSS stays blocked)', async () => {
+    const { MERMAID_SECURE_KEYS, renderMermaid } = await import('../../src/lib/mermaid/render-mermaid');
+    await renderMermaid('flowchart LR\n  A --> B', { theme, allowSourceTheme: true });
+    const config = initialize.mock.calls[0][0] as { secure: string[] };
+    expect(config.secure).toEqual([...MERMAID_SECURE_KEYS]);
+    expect(config.secure).toContain('themeCSS');
+  });
+
+  it('D1: allowSourceTheme re-derives with source themeVariables when the source sets no theme', async () => {
+    const mermaid = (await import('mermaid')).default;
+    vi.mocked(mermaid.parse).mockResolvedValueOnce({
+      diagramType: 'flowchart-v2',
+      config: { themeVariables: { primaryColor: '#ff0000', lineColor: '' } },
+    } as never);
+    const { renderMermaid } = await import('../../src/lib/mermaid/render-mermaid');
+    await renderMermaid('%%{init: {"themeVariables": {"primaryColor": "#ff0000"}}}%%\nflowchart LR\n  A --> B', {
+      theme, allowSourceTheme: true,
+    });
+    expect(initialize).toHaveBeenCalledTimes(2);
+    const rederived = initialize.mock.calls[1][0] as { theme: string; themeVariables: Record<string, string> };
+    expect(rederived.theme).toBe('base');
+    expect(rederived.themeVariables).toMatchObject({ primaryColor: '#ff0000', lineColor: '#000' });
+  });
+
+  it('D1: never re-derives with the source theme off', async () => {
+    const mermaid = (await import('mermaid')).default;
+    vi.mocked(mermaid.parse).mockResolvedValueOnce({
+      diagramType: 'flowchart-v2',
+      config: { themeVariables: { primaryColor: '#ff0000' } },
+    } as never);
+    const { renderMermaid } = await import('../../src/lib/mermaid/render-mermaid');
+    await renderMermaid('flowchart LR\n  A --> B', { theme });
+    expect(initialize).toHaveBeenCalledTimes(1);
+  });
+});

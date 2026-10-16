@@ -50,6 +50,9 @@ export const MERMAID_SECURE_KEYS = [
   'altFontFamily',
 ] as const;
 
+/** D1: keys added to `secure` unless the author opts into the source theme. `themeCSS` is always in the base list. */
+export const MERMAID_SOURCE_THEME_KEYS = ['theme', 'themeVariables'] as const;
+
 /** Per-diagram config keys of Mermaid 11 whose block accepts `useMaxWidth`. */
 type DiagramConfigKey = {
   // `0 extends 1 & T` detects `any` (e.g. themeVariables), which would otherwise match every key.
@@ -89,33 +92,47 @@ export const renderMermaid = async (
   const container = temporaryContainer();
 
   try {
-    mermaid.initialize({
+    const themeVariables: Record<string, string> = {
+      background: options.theme.transparent ? 'transparent' : options.theme.background,
+      primaryColor: options.theme.primaryColor,
+      primaryBorderColor: options.theme.primaryBorderColor,
+      primaryTextColor: options.theme.primaryTextColor,
+      lineColor: options.theme.lineColor,
+      secondaryColor: options.theme.accentColor,
+      tertiaryColor: options.theme.background,
+      fontFamily: options.theme.fontFamily,
+      fontSize: `${options.theme.fontSize}px`,
+    };
+    const config: MermaidConfig = {
       startOnLoad: false,
       securityLevel: 'strict',
-      secure: [...MERMAID_SECURE_KEYS],
+      // Mermaid deletes these keys from both `%%{init}%%` directives and frontmatter `config:` (one merged object).
+      secure: options.allowSourceTheme
+        ? [...MERMAID_SECURE_KEYS]
+        : [...MERMAID_SECURE_KEYS, ...MERMAID_SOURCE_THEME_KEYS],
       theme: 'base',
       maxTextSize: maxSourceLength,
       maxEdges: MAX_EDGES,
       ...intrinsicSizeConfig,
-      themeVariables: {
-        background: options.theme.transparent ? 'transparent' : options.theme.background,
-        primaryColor: options.theme.primaryColor,
-        primaryBorderColor: options.theme.primaryBorderColor,
-        primaryTextColor: options.theme.primaryTextColor,
-        lineColor: options.theme.lineColor,
-        secondaryColor: options.theme.accentColor,
-        tertiaryColor: options.theme.background,
-        fontFamily: options.theme.fontFamily,
-        fontSize: `${options.theme.fontSize}px`,
-      },
-    });
+      themeVariables,
+    };
+    mermaid.initialize(config);
 
-    let parsed: { diagramType?: string };
+    let parsed: { diagramType?: string; config?: MermaidConfig };
     try {
       parsed = await withTimeout(mermaid.parse(validatedSource), timeoutMs);
     } catch (error) {
       if (error instanceof MermaidRenderError) throw error;
       throw new MermaidRenderError('PARSE_ERROR', 'Mermaid could not parse this source.', String(error));
+    }
+
+    // Mermaid only re-derives dependent colors (e.g. node fill from primaryColor) when a directive also sets
+    // `theme`. With the source theme allowed, fold its sanitized themeVariables into the base derivation.
+    const sourceThemeVariables = parsed.config?.themeVariables as Record<string, unknown> | undefined;
+    if (options.allowSourceTheme && sourceThemeVariables && !parsed.config?.theme) {
+      const overrides = Object.entries(sourceThemeVariables)
+        .filter((entry): entry is [string, string] => typeof entry[1] === 'string' && entry[1] !== '');
+      mermaid.initialize({ ...config, themeVariables: { ...themeVariables, ...Object.fromEntries(overrides) } });
     }
 
     try {
