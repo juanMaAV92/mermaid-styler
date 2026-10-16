@@ -426,6 +426,21 @@ test.describe('Mermaid Styler hardening', () => {
     await expect(notice).toBeHidden();
   });
 
+  test('M2: the dropped-styles notice does not outlive a later failed render', async ({ page }) => {
+    await page.goto('/');
+    await waitForReady(page);
+    const notice = page.locator('[data-source-theme-notice]');
+    await page.getByRole('checkbox', { name: 'Use source theme' }).check({ force: true });
+    await fillSourceAndWait(page, '%%{init: {"themeVariables": {"lineColor": "url(evilrel1)"}}}%%\nflowchart LR\n  A --> B');
+    await expect(notice).toHaveText('Some diagram styles were removed because they reference external resources.');
+
+    await page.locator('[data-source-input]').fill('flowchart LR\n  A --> ');
+    await page.locator('[data-source-input]').blur();
+    await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', 'error', { timeout: 10_000 });
+    await expect(page.locator('[data-last-valid-stamp]')).toBeVisible();
+    await expect(notice).toBeHidden();
+  });
+
   test('D1: non-theme init options still apply with the source theme off', async ({ page }) => {
     const firstEdgePath = () => page.locator('[data-svg-host] svg .flowchart-link').first().getAttribute('d');
     await page.goto('/');

@@ -184,6 +184,10 @@ if (workbench) {
     const reveal = () => {
       cancelPendingErrorReveal();
       if (requestToken !== renderRequestToken) return;
+      // M2: the "styles removed" notice described the previous render; once the source is in error the preview is
+      // only a last-valid stand-in and the error feedback takes over, so the notice must not linger.
+      lastRenderDroppedStyle = false;
+      updateSourceThemeNotice();
       applyRenderState(isTimeout ? 'timeout' : 'error', {
         hasArtifact,
         message,
