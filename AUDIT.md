@@ -1,9 +1,10 @@
 # Mermaid Styler — Auditoría técnica
 
 **Fecha:** 2026-10-08 (re-auditoría 2026-10-15)
-**Estado:** Hitos 1 y 2 integrados en `main` (PR #3–#5). Hito 3 implementado en
-`feature/phase-three-operations`; falta integración y adopción/verificación del
-Dockerfile en el servicio Dokploy existente.
+**Estado:** Hitos 1 y 2 integrados en `main` (PR #3–#5). Re-auditoría 2026-10-15
+remediada en `fix/audit-2026-10-15` (2026-10-16): AUD-013, 015–021 resueltos;
+AUD-009, 010 y 014 pendientes de despliegue/verificación del owner tras el merge
+(Dokploy ya usa Dockerfile y puerto `8080`). Gates: 192 unitarias, 61 E2E Chromium, 8 smoke Firefox/WebKit, typecheck, lint, build y budget de bundle correctos (Node 22.19.0).
 **Alcance:** escalabilidad, mantenibilidad, deuda técnica, seguridad preventiva,
 calidad de UI y operación del sitio estático.
 
@@ -199,7 +200,8 @@ No se identificaron bloqueantes actuales.
 
 #### AUD-013 — Directiva `themeCSS` inyecta CSS antes de sanitizar
 
-- **Estado:** abierto 2026-10-15.
+- **Estado:** resuelto 2026-10-16 (`92c020f`, `ef905de`, `d2a454b`, `c0cf622`, `d2880c1`). Lista `secure` completa con `themeCSS`, `fontFamily`, `altFontFamily` y `dompurifyConfig`; detección de `image-set`, `@import`, `src()`, escapes y comentarios. **Ampliado a labels HTML (I1, `c0cf622`):** Mermaid strict sanitiza los labels con DOMPurify por defecto (permite `<img src>` y `style`) y los maqueta en el contenedor temporal antes de `sanitizeSvgElement`; ahora `dompurifyConfig` prohíbe `img`, `image`, `svg`, `math`, `iframe`, `object`, `embed`, `link`, `video`, `audio`, `source`, `picture`, `input`, `style` y los atributos `style`, `srcset`, `background`, `src`, `poster` (`input`/`src`/`poster` añadidos en `d2880c1` tras una sonda con `<input type=image>`). Los E2E registran todas las requests (cualquier origen) tras el render inicial y exigen cero.
+- **Estado original:** abierto 2026-10-15.
 - **Ubicación:** `src/lib/mermaid/render-mermaid.ts:52`, `src/lib/mermaid/sanitize-svg.ts:6`.
 - **Evidencia:** `%%{init: {"themeCSS": ".node rect { background-image: image-set(\"https://evil.example/a.png\" 1x); }"}}%%` provoca una request a evil.example durante el render en el contenedor temporal; solo la CSP del `<meta>` la bloquea (`FAILED … csp`). `themeCSS` no está en la lista `secure` por defecto de Mermaid. `hasExternalCssUrl` solo detecta `url(`, no `image-set`, `@import "…"` ni `src()`.
 - **Impacto:** un source no confiable (p. ej. generado por IA) puede lanzar requests externas durante el render; sin la CSP la defensa sería nula.
@@ -208,7 +210,8 @@ No se identificaron bloqueantes actuales.
 
 #### AUD-014 — Producción sin contrato de headers
 
-- **Estado:** abierto 2026-10-15.
+- **Estado:** pendiente de despliegue/verificación del owner. El contrato está en la rama (`a9007bd`, `3c105a1`) y Dokploy ya usa Dockerfile y puerto `8080`; verificar tras el merge con `npm run check:deployment -- https://mermaid-styler.duckdns.org`.
+- **Estado original:** abierto 2026-10-15.
 - **Ubicación:** servicio Dokploy en producción; `deploy/nginx.conf`.
 - **Evidencia:** curl 2026-10-15: sin CSP header, X-Frame-Options, Referrer-Policy ni Cache-Control; `/nope` y `/healthz` devuelven 200 con `index.html`. La meta-CSP no admite `frame-ancestors`, por lo que no hay protección de clickjacking.
 - **Impacto:** la defensa en profundidad HTTP validada en contenedor local (AUD-010) no está activa en producción.
@@ -217,7 +220,8 @@ No se identificaron bloqueantes actuales.
 
 #### AUD-016 — Límite de complejidad incoherente con Mermaid
 
-- **Estado:** abierto 2026-10-15.
+- **Estado:** resuelto 2026-10-16 (`cde10e2`).
+- **Estado original:** abierto 2026-10-15.
 - **Ubicación:** `src/lib/mermaid/validation.ts:5`.
 - **Evidencia:** el validador permite 1.200 conexiones; Mermaid `maxEdges` es 500. Con 600 y 1.100 aristas: pasa la validación, hay long tasks de 239–653 ms y el error es el genérico "Mermaid could not render this source.".
 - **Impacto:** el usuario espera hasta 653 ms de bloqueo y recibe un error sin causa accionable.
@@ -226,7 +230,8 @@ No se identificaron bloqueantes actuales.
 
 #### AUD-018 — Se descarta el error real de Mermaid
 
-- **Estado:** abierto 2026-10-15.
+- **Estado:** resuelto 2026-10-16 (`ae934d4`, `dd7f324`, `c483ba4`, `2771eb4`).
+- **Estado original:** abierto 2026-10-15.
 - **Ubicación:** `src/scripts/app.ts:132-140`.
 - **Evidencia:** se muestra el `error.message` genérico; `error.details` ("Parse error on line N…", "Edge limit exceeded…") se pierde.
 - **Impacto:** el usuario no sabe qué línea corregir ni por qué falla el render.
@@ -299,7 +304,7 @@ No se identificaron bloqueantes actuales.
 
 #### AUD-009 — Despliegue no totalmente reproducible desde Git
 
-- **Estado:** implementación versionada completa; adopción en Dokploy pendiente.
+- **Estado:** pendiente de despliegue/verificación del owner. Dokploy ya está en Build Type = Dockerfile y puerto `8080`; verificar tras el merge con `npm run check:deployment -- https://mermaid-styler.duckdns.org`.
 - **Ubicación:** `package.json`, `README.md`, configuración de Dokploy.
 - **Evidencia:** Dockerfile multistage con Node 22.19.0 y Nginx 1.28.0,
   `npm ci`, health check `/healthz`, `.dockerignore` y `DEPLOYMENT.md`.
@@ -311,7 +316,7 @@ No se identificaron bloqueantes actuales.
 
 #### AUD-010 — Headers y cache sin contrato explícito
 
-- **Estado:** contrato validado en contenedor local; producción pendiente.
+- **Estado:** contrato validado en contenedor local; pendiente de despliegue/verificación del owner (verificar tras el merge con `npm run check:deployment -- https://mermaid-styler.duckdns.org`).
 - **Ubicación:** `deploy/nginx.conf`, `scripts/check-deployment.mjs`.
 - **Evidencia:** CSP HTTP, nosniff, DENY y no-referrer se aplican incluso a 404.
   HTML revalidable y assets Astro immutable. El contrato se comprueba en CI
@@ -323,7 +328,8 @@ No se identificaron bloqueantes actuales.
 
 #### AUD-015 — Diferencial de parsers en el sanitizador
 
-- **Estado:** abierto 2026-10-15.
+- **Estado:** resuelto 2026-10-16 (`c4e5da4`).
+- **Estado original:** abierto 2026-10-15.
 - **Ubicación:** `src/lib/mermaid/sanitize-svg.ts`, `src/scripts/app.ts:168`.
 - **Evidencia:** se sanitiza con `DOMParser` `image/svg+xml` + `XMLSerializer` y se reinserta con `innerHTML` (parser HTML): patrón clásico de mXSS. Sin bypass demostrado. `animate`/`set` pueden reescribir `href` en tiempo de ejecución y no están en la denylist.
 - **Impacto:** un vector que se interprete distinto en ambos parsers podría eludir el sanitizador.
@@ -332,7 +338,8 @@ No se identificaron bloqueantes actuales.
 
 #### AUD-017 — Labels HTML válidos con elementos vacíos rompen el sanitizador
 
-- **Estado:** abierto 2026-10-15.
+- **Estado:** resuelto 2026-10-16 (`c4e5da4`). Desde I1 (`c0cf622`) el `<img>` de un label ya no llega al DOM ni se descarga; `<hr>` y demás void elements se siguen normalizando.
+- **Estado original:** abierto 2026-10-15.
 - **Ubicación:** `src/lib/mermaid/sanitize-svg.ts` (`normalizeMermaidLineBreaks`).
 - **Evidencia:** `A["<b>bold</b> <img src=x onerror=alert(1)>"] --> B` produce "Mermaid returned an invalid SVG document.". La normalización solo cubre `<br>`.
 - **Impacto:** diagramas legítimos con `<img>`, `<hr>` u otros void elements no se pueden renderizar.
@@ -341,7 +348,8 @@ No se identificaron bloqueantes actuales.
 
 #### AUD-019 — Export con source embebido distinto del renderizado
 
-- **Estado:** abierto 2026-10-15.
+- **Estado:** resuelto 2026-10-16 (`91737c3`, `c149b66`).
+- **Estado original:** abierto 2026-10-15.
 - **Ubicación:** `src/scripts/app.ts:67-71`.
 - **Evidencia:** en error con artefacto previo, los exports entregan el último diagrama válido pero "Include source" embebe el texto actual (inválido) del textarea.
 - **Impacto:** el SVG exportado contiene un source que no corresponde al diagrama dibujado.
@@ -350,7 +358,8 @@ No se identificaron bloqueantes actuales.
 
 #### AUD-020 — Copy de scaffolding en producción
 
-- **Estado:** abierto 2026-10-15.
+- **Estado:** resuelto 2026-10-16 (`caa056c`).
+- **Estado original:** abierto 2026-10-15.
 - **Ubicación:** `src/components/`, `src/i18n/messages.en.ts`.
 - **Evidencia:** "Renderer connects next" con atajo ⌘↵ sin handler; "Scaffold ready"; "Example artifact"; "The live Mermaid engine connects here in the next phase"; footer "Paste Mermaid to start styling" siempre visible.
 - **Impacto:** el producto comunica que está inacabado y anuncia un atajo inexistente.
@@ -359,7 +368,8 @@ No se identificaron bloqueantes actuales.
 
 #### AUD-021 — Interacción del preview y móvil
 
-- **Estado:** abierto 2026-10-15.
+- **Estado:** resuelto 2026-10-16 (`7605911`, `e911ec0`, `da2e72b`, `b24690a`, `1274065`, `26e0c33`; aviso de `init` con D1 `613ec3e`, `3421b99`, `bd5259c`; aviso de estilos descartados `f685c1b`; Fit con margen para los controles de zoom y contraste `--ember-ink` `30694e3`). **Cambio en el export:** el SVG exportado tiene ahora un ancho fijo en px (`useMaxWidth: false` en todos los tipos de diagrama, decisión de la Tarea 4.2) en lugar de `width="100%"` + `max-width`; el tamaño intrínseco es el real.
+- **Estado original:** abierto 2026-10-15.
 - **Ubicación:** `src/styles/global.css`, `src/scripts/app.ts`, componentes del preview.
 - **Evidencia:**
   - Móvil: botones del topbar solo con icono; Copy SVG/Copy PNG comparten icono y Export SVG/PNG también.
@@ -400,6 +410,14 @@ No se identificaron bloqueantes actuales.
 Actions fijadas por tag, nginx como root en :80, sin Dependabot, `@types/node ^26`
 vs engine 22, `gzip_types` sin `text/plain` (`third-party-licenses.txt` 624 KB),
 KaTeX low (requiere Mermaid 12).
+
+Estado 2026-10-16:
+
+- nginx como root en :80 → **resuelto** (`a9007bd`): `nginx-unprivileged` en `8080`.
+- `gzip_types` sin `text/plain` → **resuelto** (`a9007bd`).
+- Actions fijadas por tag y sin Dependabot → **resuelto** (`3c105a1`): actions por SHA y `dependabot.yml`.
+- `@types/node ^26` → **resuelto** (`a92a642`): `^22`, alineado con el engine.
+- KaTeX low → **bajo seguimiento** en `docs/adr/0001-mermaid-12.md` (se queda en Mermaid 11.x).
 
 ## Aspectos positivos a preservar
 
@@ -489,3 +507,4 @@ Después de modificar render/export, ejecutar además una prueba manual con:
 | 2026-10-08 | Hito 3 implementado: contenedor estático, contrato HTTP, acciones 44px, licencia y contribuciones | Validación local; pendiente CI remoto y adopción en Dokploy |
 | 2026-10-08 | Correcciones transitivas compatibles y Node 22.19.0 | Sin hallazgos high; quedan 2 low de KaTeX/Mermaid |
 | 2026-10-15 | Re-auditoría: 4 P1 nuevos (AUD-013, 014, 016, 018), 5 P2 (AUD-015, 017, 019, 020, 021) | Plan docs/superpowers/plans/2026-10-15-audit-remediation.md |
+| 2026-10-16 | Cierre de la remediación: AUD-013 (incl. labels HTML), 015–021 resueltos; AUD-009/010/014 pendientes de despliegue del owner; export SVG con ancho fijo en px (`useMaxWidth: false`) | 192 unitarias, 61 E2E Chromium, 8 smoke Firefox/WebKit, typecheck, lint, build y budget de bundle correctos (Node 22.19.0) |
