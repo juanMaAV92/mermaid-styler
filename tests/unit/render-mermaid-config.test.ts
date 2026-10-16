@@ -53,9 +53,11 @@ describe('renderMermaid label sanitizing (AUD-013)', () => {
     const config = initialize.mock.calls[0][0] as { dompurifyConfig: { FORBID_TAGS: string[]; FORBID_ATTR: string[] } };
     expect(config.dompurifyConfig.FORBID_TAGS).toEqual(expect.arrayContaining(
       ['style', 'img', 'image', 'svg', 'math', 'iframe', 'object', 'embed', 'link', 'video', 'audio', 'source', 'picture',
-        'input'],
+        'input', 'form'],
     ));
-    expect(config.dompurifyConfig.FORBID_ATTR).toEqual(expect.arrayContaining(['style', 'srcset', 'background', 'src', 'poster']));
+    expect(config.dompurifyConfig.FORBID_ATTR).toEqual(expect.arrayContaining(
+      ['style', 'srcset', 'background', 'src', 'poster', 'action', 'formaction'],
+    ));
   });
 
   it('AUD-013: dompurifyConfig is a secure key in both source-theme modes', async () => {

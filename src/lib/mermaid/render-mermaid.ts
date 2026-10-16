@@ -64,8 +64,10 @@ export const LABEL_DOMPURIFY_CONFIG = {
     'style', 'img', 'image', 'svg', 'math', 'iframe', 'object', 'embed', 'link', 'video', 'audio', 'source', 'picture',
     // `<input type="image" src>` also fetches during layout; no allowed label tag needs `src` or `poster`.
     'input',
+    // Forms could navigate or submit elsewhere; labels never need them.
+    'form',
   ],
-  FORBID_ATTR: ['style', 'srcset', 'background', 'src', 'poster'],
+  FORBID_ATTR: ['style', 'srcset', 'background', 'src', 'poster', 'action', 'formaction'],
 } as const satisfies NonNullable<MermaidConfig['dompurifyConfig']>;
 
 /** D1: keys added to `secure` unless the author opts into the source theme. `themeCSS` is always in the base list. */
