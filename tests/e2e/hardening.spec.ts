@@ -55,6 +55,17 @@ const fillSourceAndWait = async (page: Page, source: string) => {
   await waitForReady(page, before);
 };
 
+/**
+ * AUD-013: record every request (any origin, including same-origin and failed/CSP-blocked ones) made after the app's
+ * initial render. Call it once the first preview is ready so the app's own initial assets are excluded.
+ */
+const recordRequests = (page: Page) => {
+  const requests: string[] = [];
+  page.on('request', (request) => requests.push(request.url()));
+  page.on('requestfailed', (request) => requests.push(`FAILED ${request.url()} ${request.failure()?.errorText ?? ''}`.trim()));
+  return requests;
+};
+
 const waitForReady = async (page: Page, previousSvgMarkup?: string) => {
   if (previousSvgMarkup) {
     await expect.poll(
@@ -230,19 +241,47 @@ test.describe('Mermaid Styler hardening', () => {
     }
   });
 
-  test('AUD-013: themeCSS directive triggers no external request', async ({ page }) => {
-    const externalRequests: string[] = [];
-    const origin = new URL(process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:4322').origin;
-    const record = (url: string, errorText = '') => {
-      if (!url.startsWith(origin) && !url.startsWith('data:') && !url.startsWith('blob:')) externalRequests.push(`${url} ${errorText}`.trim());
-    };
-    page.on('request', (request) => record(request.url()));
-    page.on('requestfailed', (request) => record(request.url(), request.failure()?.errorText ?? ''));
+  test('AUD-013: themeCSS directive triggers no request', async ({ page }) => {
     await page.goto('/');
-    await page.locator('[data-source-input]').fill(themeCssImageSet);
-    await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', 'ready', { timeout: 10_000 });
-    await expect(page.locator('[data-svg-host] svg')).toBeVisible();
-    expect(externalRequests).toEqual([]);
+    await waitForReady(page);
+    const requests = recordRequests(page);
+    await fillSourceAndWait(page, themeCssImageSet);
+    expect(requests).toEqual([]);
+  });
+
+  for (const label of [
+    { name: 'external <img>', source: 'flowchart LR\n  A["<img src=\'https://evil.example/label.png\'> hi"] --> B' },
+    { name: 'relative <img>', source: 'flowchart LR\n  A["<img src=\'probe-label.png\'> hi"] --> B' },
+    { name: 'style url()', source: 'flowchart LR\n  A["<span style=\'background:url(https://evil.example/span.png)\'>x</span>"] --> B' },
+    {
+      name: 'external <img> and a dompurifyConfig directive',
+      source: '%%{init: {"dompurifyConfig": {"FORBID_TAGS": []}}}%%\nflowchart LR\n  A["<img src=\'https://evil.example/label.png\'> hi"] --> B',
+    },
+  ]) {
+    test(`AUD-013: HTML label with ${label.name} triggers no request`, async ({ page }) => {
+      await page.goto('/');
+      await waitForReady(page);
+      const requests = recordRequests(page);
+      await fillSourceAndWait(page, label.source);
+      // Give late image/CSS fetches from the off-screen layout container time to surface.
+      await page.waitForTimeout(500);
+      expect(requests).toEqual([]);
+      const markup = await svgMarkup(page);
+      expect(markup).not.toContain('evil.example');
+      expect(markup).not.toContain('probe-label');
+    });
+  }
+
+  test('AUD-013: label sanitizing keeps text formatting and markdown labels', async ({ page }) => {
+    await page.goto('/');
+    await waitForReady(page);
+    await fillSourceAndWait(page, 'flowchart LR\n  A["<b>bold</b><br/><i>it</i> plain"] --> B["`**md** _em_`"]');
+    const labels = page.locator('[data-svg-host] svg g.node foreignObject');
+    await expect(labels.first().locator('b')).toHaveText('bold');
+    await expect(labels.first().locator('i')).toHaveText('it');
+    await expect(labels.first().locator('br')).toHaveCount(1);
+    await expect(labels.nth(1).locator('strong')).toHaveText('md');
+    await expect(labels.nth(1).locator('em')).toHaveText('em');
   });
 
   test('AUD-016: 501 edges are rejected with the 500 limit and no long task', async ({ page }) => {
@@ -268,25 +307,15 @@ test.describe('Mermaid Styler hardening', () => {
   });
 
   test('AUD-013: fontFamily directive cannot smuggle external CSS into the SVG', async ({ page }) => {
-    const externalRequests: string[] = [];
-    const origin = new URL(process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:4322').origin;
-    const record = (url: string) => {
-      if (!url.startsWith(origin) && !url.startsWith('data:') && !url.startsWith('blob:')) externalRequests.push(url);
-    };
-    page.on('request', (request) => record(request.url()));
-    page.on('requestfailed', (request) => record(request.url()));
     await page.goto('/');
-    const before = await page.locator('[data-svg-host] svg').evaluate((svg) => svg.outerHTML);
-    await page.locator('[data-source-input]').fill(
+    await waitForReady(page);
+    const requests = recordRequests(page);
+    await fillSourceAndWait(
+      page,
       '%%{init: {"fontFamily": "x; background-image: \\\\75 rl(https://evil.example/a.png)"}}%%\nflowchart LR\n  A --> B',
     );
-    await expect.poll(
-      () => page.locator('[data-svg-host] svg').evaluate((svg) => svg.outerHTML),
-      { timeout: 10_000 },
-    ).not.toBe(before);
-    await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', 'ready');
-    const markup = await page.locator('[data-svg-host] svg').evaluate((svg) => svg.outerHTML);
-    expect(externalRequests).toEqual([]);
+    const markup = await svgMarkup(page);
+    expect(requests).toEqual([]);
     expect(markup).not.toContain('evil.example');
     expect(markup).not.toContain('\\75 rl');
   });

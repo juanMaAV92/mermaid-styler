@@ -42,6 +42,30 @@ describe('renderMermaid config', () => {
   });
 });
 
+describe('renderMermaid label sanitizing (AUD-013)', () => {
+  beforeEach(() => initialize.mockClear());
+
+  it('AUD-013: forbids resource-loading tags and attributes in HTML labels', async () => {
+    const { renderMermaid } = await import('../../src/lib/mermaid/render-mermaid');
+    await renderMermaid('flowchart LR\n  A --> B', { theme });
+    const config = initialize.mock.calls[0][0] as { dompurifyConfig: { FORBID_TAGS: string[]; FORBID_ATTR: string[] } };
+    expect(config.dompurifyConfig.FORBID_TAGS).toEqual(expect.arrayContaining(
+      ['style', 'img', 'image', 'svg', 'math', 'iframe', 'object', 'embed', 'link', 'video', 'audio', 'source', 'picture'],
+    ));
+    expect(config.dompurifyConfig.FORBID_ATTR).toEqual(expect.arrayContaining(['style', 'srcset', 'background']));
+  });
+
+  it('AUD-013: dompurifyConfig is a secure key in both source-theme modes', async () => {
+    const { MERMAID_SECURE_KEYS, renderMermaid } = await import('../../src/lib/mermaid/render-mermaid');
+    expect(MERMAID_SECURE_KEYS).toContain('dompurifyConfig');
+    await renderMermaid('flowchart LR\n  A --> B', { theme });
+    await renderMermaid('flowchart LR\n  A --> B', { theme, allowSourceTheme: true });
+    for (const [config] of initialize.mock.calls as [{ secure: string[] }][]) {
+      expect(config.secure).toContain('dompurifyConfig');
+    }
+  });
+});
+
 describe('renderMermaid source theme (D1)', () => {
   beforeEach(() => initialize.mockClear());
 

@@ -49,7 +49,20 @@ export const MERMAID_SECURE_KEYS = [
   'themeCSS',
   'fontFamily',
   'altFontFamily',
+  'dompurifyConfig',
 ] as const;
+
+/**
+ * AUD-013: DOMPurify config for HTML labels. In `securityLevel: 'strict'` Mermaid's `sanitizeText` passes every label
+ * through `DOMPurify.sanitize(text, config.dompurifyConfig)` (defaulting to `{ FORBID_TAGS: ['style'] }`), and the
+ * result is laid out in the live temporary container before `sanitizeSvgElement` runs. DOMPurify's defaults keep
+ * `<img src>` and `style`, so the browser would fetch label images and `url()` backgrounds during layout. Forbid every
+ * tag and attribute that can load a resource; text formatting (`<b>`, `<i>`, `<br>`, markdown) is unaffected.
+ */
+export const LABEL_DOMPURIFY_CONFIG = {
+  FORBID_TAGS: ['style', 'img', 'image', 'svg', 'math', 'iframe', 'object', 'embed', 'link', 'video', 'audio', 'source', 'picture'],
+  FORBID_ATTR: ['style', 'srcset', 'background'],
+} as const satisfies NonNullable<MermaidConfig['dompurifyConfig']>;
 
 /** D1: keys added to `secure` unless the author opts into the source theme. `themeCSS` is always in the base list. */
 export const MERMAID_SOURCE_THEME_KEYS = ['theme', 'themeVariables'] as const;
@@ -128,6 +141,11 @@ export const renderMermaid = async (
       theme: 'base',
       maxTextSize: maxSourceLength,
       maxEdges: MAX_EDGES,
+      // Mermaid mutates nothing here, but hand it fresh arrays so the exported constant cannot be altered.
+      dompurifyConfig: {
+        FORBID_TAGS: [...LABEL_DOMPURIFY_CONFIG.FORBID_TAGS],
+        FORBID_ATTR: [...LABEL_DOMPURIFY_CONFIG.FORBID_ATTR],
+      },
       ...intrinsicSizeConfig,
       themeVariables,
     };
