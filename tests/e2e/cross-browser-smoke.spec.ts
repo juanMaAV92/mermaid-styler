@@ -55,4 +55,17 @@ test.describe('Cross-browser smoke', () => {
     });
     expect(tripped).toBe(true);
   });
+
+  test('AUD-021: mobile export menu opens fully inside the viewport', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+    await page.getByRole('button', { name: 'PNG export options' }).click();
+    const menu = page.locator('#export-menu-png');
+    await expect(menu).toBeVisible();
+    const box = await menu.boundingBox();
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.y).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(390);
+    expect(box!.y + box!.height).toBeLessThanOrEqual(844);
+  });
 });

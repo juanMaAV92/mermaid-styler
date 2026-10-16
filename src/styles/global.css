@@ -237,8 +237,6 @@ input:focus-visible {
 }
 
 .export-split .export-split__copy {
-  min-width: var(--control-target);
-  padding: 0;
   border-start-end-radius: var(--radius-sm);
   border-end-end-radius: var(--radius-sm);
 }
@@ -283,8 +281,8 @@ input:focus-visible {
 .export-menu__list {
   position: fixed;
   inset: auto;
-  top: 68px;
-  right: var(--space-4);
+  top: var(--topbar-height, 68px);
+  right: var(--space-2);
   margin: 0;
   padding: var(--space-2);
   min-width: 160px;
@@ -1094,6 +1092,10 @@ input:focus-visible {
 }
 
 @media (max-width: 820px) {
+  :root {
+    --topbar-height: 68px;
+  }
+
   .topbar {
     grid-template-columns: 1fr auto;
     padding: var(--space-3) var(--space-4);
@@ -1243,8 +1245,13 @@ input:focus-visible {
 
   .export-menu__list {
     top: calc(anchor(bottom) + var(--space-2));
-    right: auto;
-    left: anchor(left);
-    position-try-fallbacks: flip-inline;
+    right: anchor(right);
+    left: auto;
+  }
+}
+
+@media (max-width: 400px) {
+  :root {
+    --topbar-height: 120px;
   }
 }

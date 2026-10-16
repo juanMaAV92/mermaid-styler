@@ -23,7 +23,8 @@ const menuId = `export-menu-${key}`;
       <span class="button__format">{format}</span>
     </button>
     <button class="button export-split__copy" type="button" disabled aria-label={copyLabel} title={copyLabel} data-action={`copy-${key}`}>
-      <Icon name={`copy-${key}`} />
+      <Icon name="copy" />
+      <span>{copyText}</span>
     </button>
   </div>
   <div class="export-menu">
