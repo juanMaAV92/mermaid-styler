@@ -161,14 +161,26 @@ test.describe('Mermaid Styler workbench', () => {
   });
 
   test('AUD-018: parse error shows line and jumps to it', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/');
     const editor = page.getByRole('textbox', { name: 'Source' });
     await editor.fill('flowchart LR\n A --> B[');
 
-    await expect(page.locator('[data-source-feedback]')).toContainText(/line 2/i, { timeout: 10_000 });
+    const feedback = page.locator('[data-source-feedback]');
+    await expect(feedback).toContainText(/line 2/i, { timeout: 10_000 });
+    await expect(feedback).toBeInViewport();
     await page.getByRole('button', { name: 'Go to line 2' }).click();
 
+    await expect(editor).toBeFocused();
     const selectionStart = await editor.evaluate((el) => (el as HTMLTextAreaElement).selectionStart);
-    expect(selectionStart).toBeGreaterThanOrEqual('flowchart LR\n'.length);
+    expect(selectionStart).toBe('flowchart LR\n'.length);
+  });
+
+  test('AUD-018: parse error feedback is visible on mobile', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+    await page.getByRole('textbox', { name: 'Source' }).fill('flowchart LR\n A --> B[');
+    await expect(page.locator('[data-source-feedback]')).toContainText(/line 2/i, { timeout: 10_000 });
+    await expect(page.locator('[data-source-feedback]')).toBeInViewport();
   });
 });

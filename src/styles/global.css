@@ -236,6 +236,15 @@ input:focus-visible {
   grid-template-rows: auto 1fr auto;
 }
 
+.panel--editor {
+  grid-template-rows: auto auto 1fr auto;
+}
+
+.panel--editor > .panel-head { grid-row: 1; }
+.panel--editor > .source-feedback { grid-row: 2; }
+.panel--editor > .editor-wrap { grid-row: 3; }
+.panel--editor > .panel-foot { grid-row: 4; }
+
 .panel--artifact {
   display: grid;
   grid-template-rows: auto 1fr;
@@ -322,14 +331,11 @@ input:focus-visible {
   display: grid;
   gap: var(--space-1);
   padding: var(--space-3) var(--space-5);
-  border-top: var(--border-thin) solid rgba(255, 107, 87, 0.35);
+  border-bottom: var(--border-thin) solid rgba(255, 107, 87, 0.35);
   color: var(--ember);
   background: rgba(255, 107, 87, 0.08);
   font-size: 11px;
   line-height: 1.45;
-  position: sticky;
-  bottom: 0;
-  z-index: 1;
 }
 
 .source-feedback__body {
