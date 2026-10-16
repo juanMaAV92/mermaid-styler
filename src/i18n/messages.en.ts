@@ -79,6 +79,7 @@ const messages = {
   transparent: 'Transparent background',
   sourceThemeNotice: 'This source sets its own theme; your style settings take priority.',
   sourceThemeApplied: 'Using the theme defined in the source.',
+  sourceThemeStylesDropped: 'Some diagram styles were removed because they reference external resources.',
   useSourceTheme: 'Use source theme',
   resetStyles: 'Reset styles',
   copySvg: 'Copy SVG',

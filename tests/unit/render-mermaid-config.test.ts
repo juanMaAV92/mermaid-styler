@@ -66,6 +66,21 @@ describe('renderMermaid label sanitizing (AUD-013)', () => {
   });
 });
 
+describe('renderMermaid dropped styles (M2)', () => {
+  it('M2: flags the result when the sanitizer drops a <style> block', async () => {
+    const mermaid = (await import('mermaid')).default;
+    vi.mocked(mermaid.render).mockResolvedValueOnce({
+      svg: '<svg xmlns="http://www.w3.org/2000/svg"><style>.node { fill: url(evilrel1); }</style></svg>',
+      diagramType: 'flowchart-v2',
+    } as never);
+    const { renderMermaid } = await import('../../src/lib/mermaid/render-mermaid');
+    const dropped = await renderMermaid('flowchart LR\n  A --> B', { theme, allowSourceTheme: true });
+    expect(dropped.droppedStyle).toBe(true);
+    const clean = await renderMermaid('flowchart LR\n  A --> B', { theme });
+    expect(clean.droppedStyle).toBe(false);
+  });
+});
+
 describe('renderMermaid source theme (D1)', () => {
   beforeEach(() => initialize.mockClear());
 

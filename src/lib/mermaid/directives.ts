@@ -82,9 +82,12 @@ const isColor = (value: string) => HEX_COLOR.test(value) || FUNCTIONAL_COLOR.tes
   || NAMED_COLORS.has(value.toLowerCase());
 
 /**
- * D1 defense in depth: the source themeVariables the app re-feeds into `mermaid.initialize` when the author opts
- * into the source theme. Only plain colour values pass (plus a numeric `fontSize`); font, CSS and any other key
- * or value shape is dropped, whatever Mermaid's own sanitizer let through.
+ * D1: the source themeVariables the app re-feeds into the base theme derivation (`mermaid.initialize`) when the
+ * author opts into the source theme. Only plain colour values pass (plus a numeric `fontSize`); font, CSS and any
+ * other key or value shape is not re-fed. This allowlist limits only what is re-fed: Mermaid still merges the raw
+ * directive themeVariables itself, so the security of those values relies on Mermaid's `sanitizeDirective`, which
+ * blanks any themeVariable not matching /^[\d "#%(),.;A-Za-z]+$/ (no ':' '/' '\\' '-'). Anything that still
+ * references an external resource is removed by sanitizeSvgElement (see M2 for the user-visible notice).
  */
 export const pickSourceThemeVariables = (themeVariables: unknown): Record<string, string> => {
   if (typeof themeVariables !== 'object' || themeVariables === null || Array.isArray(themeVariables)) return {};
@@ -100,4 +103,20 @@ export const pickSourceThemeVariables = (themeVariables: unknown): Record<string
     }
   }
   return picked;
+};
+
+export type SourceThemeNoticeKey = 'sourceThemeNotice' | 'sourceThemeApplied' | 'sourceThemeStylesDropped';
+
+/**
+ * Which style-rail notice to show (a key of the messages module), or undefined for none. M2: a `<style>` block
+ * dropped by the sanitizer wins, since the preview otherwise looks "ready" but unstyled with no explanation.
+ */
+export const sourceThemeNoticeKey = ({ source, allowSourceTheme, droppedStyle }: {
+  source: string;
+  allowSourceTheme: boolean;
+  droppedStyle: boolean;
+}): SourceThemeNoticeKey | undefined => {
+  if (droppedStyle) return 'sourceThemeStylesDropped';
+  if (!hasThemeDirective(source)) return undefined;
+  return allowSourceTheme ? 'sourceThemeApplied' : 'sourceThemeNotice';
 };

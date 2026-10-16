@@ -42,5 +42,7 @@ export type MermaidRenderResult = {
   svg: string;
   element: SVGSVGElement;
   diagramType: string;
+  /** M2: the sanitizer removed a `<style>` block (an external `url()`), so the diagram renders without its styles. */
+  droppedStyle: boolean;
   bindFunctions?: (element: Element) => void;
 };

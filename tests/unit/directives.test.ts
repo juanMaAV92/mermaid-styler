@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hasThemeDirective, pickSourceThemeVariables } from '../../src/lib/mermaid/directives';
+import { hasThemeDirective, pickSourceThemeVariables, sourceThemeNoticeKey } from '../../src/lib/mermaid/directives';
 
 describe('hasThemeDirective', () => {
   it.each([
@@ -108,5 +108,21 @@ describe('FUNCTIONAL_COLOR without the length cap', () => {
     const start = performance.now();
     expect(pickSourceThemeVariables({ primaryColor: value })).toEqual({});
     expect(performance.now() - start).toBeLessThan(50);
+  });
+});
+
+describe('sourceThemeNoticeKey', () => {
+  const themed = '%%{init: {"themeVariables": {"primaryColor": "#ff0000"}}}%%\nflowchart LR\n  A --> B';
+  const plain = 'flowchart LR\n  A --> B';
+
+  it('M2: a dropped style block wins over the theme notices', () => {
+    expect(sourceThemeNoticeKey({ source: themed, allowSourceTheme: true, droppedStyle: true })).toBe('sourceThemeStylesDropped');
+    expect(sourceThemeNoticeKey({ source: plain, allowSourceTheme: false, droppedStyle: true })).toBe('sourceThemeStylesDropped');
+  });
+
+  it('D1: reports override or applied theme only when the source sets one', () => {
+    expect(sourceThemeNoticeKey({ source: themed, allowSourceTheme: false, droppedStyle: false })).toBe('sourceThemeNotice');
+    expect(sourceThemeNoticeKey({ source: themed, allowSourceTheme: true, droppedStyle: false })).toBe('sourceThemeApplied');
+    expect(sourceThemeNoticeKey({ source: plain, allowSourceTheme: true, droppedStyle: false })).toBeUndefined();
   });
 });

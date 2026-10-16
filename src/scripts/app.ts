@@ -2,7 +2,7 @@ import messages from '../i18n/messages.en';
 import { formatRenderError } from '../lib/mermaid/format-error';
 import { MermaidRenderError } from '../lib/mermaid/types';
 import type { MermaidRenderResult, RenderMermaidOptions } from '../lib/mermaid/types';
-import { hasThemeDirective } from '../lib/mermaid/directives';
+import { sourceThemeNoticeKey } from '../lib/mermaid/directives';
 import { LatestWinsRenderCoordinator } from '../lib/mermaid/render-coordinator';
 import { ERROR_REVEAL_MS, RENDER_DEBOUNCE_MS, isRenderState, type RenderState } from '../lib/ui/render-state';
 import { addSvgMetadata } from '../lib/export/svg';
@@ -67,6 +67,7 @@ if (workbench) {
   let requestRender = () => undefined;
   // The source that produced the SVG currently in the preview; exports embed this, never the live textarea.
   let lastRenderedSource = '';
+  let lastRenderDroppedStyle = false;
 
   const getRenderedSvg = () => svgHost?.querySelector<SVGSVGElement>('svg');
 
@@ -155,6 +156,7 @@ if (workbench) {
       svgHost.replaceChildren();
       svgHost.hidden = true;
     }
+    lastRenderDroppedStyle = false;
   };
 
   goToLineButton?.addEventListener('click', () => {
@@ -230,6 +232,8 @@ if (workbench) {
         if (svgHost) {
           svgHost.replaceChildren(document.importNode(outcome.result.element, true));
           lastRenderedSource = source;
+          lastRenderDroppedStyle = outcome.result.droppedStyle;
+          updateSourceThemeNotice();
           outcome.result.bindFunctions?.(svgHost);
           svgHost.hidden = false;
         }
@@ -255,10 +259,16 @@ if (workbench) {
   };
 
   // D1: tell the author their source's theme is being overridden by the rail (not a live region by design).
+  // M2: also say when the sanitizer dropped the rendered diagram's <style> block (it reflects the last render).
   const updateSourceThemeNotice = () => {
     if (!sourceThemeNotice) return;
-    sourceThemeNotice.hidden = !hasThemeDirective(sourceInput?.value ?? '');
-    sourceThemeNotice.textContent = sourceThemeToggle?.checked ? messages.sourceThemeApplied : messages.sourceThemeNotice;
+    const key = sourceThemeNoticeKey({
+      source: sourceInput?.value ?? '',
+      allowSourceTheme: sourceThemeToggle?.checked ?? false,
+      droppedStyle: lastRenderDroppedStyle,
+    });
+    sourceThemeNotice.hidden = !key;
+    sourceThemeNotice.textContent = key ? messages[key] : '';
   };
 
   sourceInput?.addEventListener('input', () => {

@@ -161,7 +161,8 @@ export const renderMermaid = async (
 
     // Mermaid only re-derives dependent colors (e.g. node fill from primaryColor) when a directive also sets
     // `theme`. With the source theme allowed, fold its sanitized themeVariables into the base derivation.
-    // Only allowlisted colour values (and a numeric fontSize) are re-fed; see pickSourceThemeVariables.
+    // Only allowlisted colour values (and a numeric fontSize) are re-fed; see pickSourceThemeVariables. Mermaid
+    // itself still merges the raw directive themeVariables (filtered only by its sanitizeDirective regex).
     const sourceOverrides = options.allowSourceTheme && !parsed.config?.theme
       ? pickSourceThemeVariables(parsed.config?.themeVariables)
       : {};
@@ -171,11 +172,13 @@ export const renderMermaid = async (
 
     try {
       const result = await withTimeout(mermaid.render(renderId, validatedSource, container), timeoutMs);
-      const element = sanitizeSvgElement(result.svg);
+      const report = { droppedStyle: false };
+      const element = sanitizeSvgElement(result.svg, report);
       return {
         svg: new XMLSerializer().serializeToString(element),
         element,
         diagramType: result.diagramType ?? parsed.diagramType ?? 'unknown',
+        droppedStyle: report.droppedStyle,
         bindFunctions: result.bindFunctions,
       };
     } catch (error) {

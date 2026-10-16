@@ -84,6 +84,26 @@ describe('SVG sanitization rules', () => {
     expect(imported.namespaceURI).toBe('http://www.w3.org/2000/svg');
   });
 
+  it('M2: reports when a <style> block with an external reference is dropped', () => {
+    const report = { droppedStyle: false };
+    const element = sanitizeSvgElement(
+      '<svg xmlns="http://www.w3.org/2000/svg"><style>.node { fill: url(evilrel1); }</style><text>hi</text></svg>',
+      report,
+    );
+    expect(element.querySelector('style')).toBeNull();
+    expect(report.droppedStyle).toBe(true);
+  });
+
+  it('M2: leaves the report clear when every <style> block is kept', () => {
+    const report = { droppedStyle: false };
+    const element = sanitizeSvgElement(
+      '<svg xmlns="http://www.w3.org/2000/svg"><style>.node { fill: url(#grad); }</style><text>hi</text></svg>',
+      report,
+    );
+    expect(element.querySelector('style')).not.toBeNull();
+    expect(report.droppedStyle).toBe(false);
+  });
+
   it('AUD-017: invalid XML still throws SANITIZE_ERROR', () => {
     expect(() => sanitizeSvgElement('<svg xmlns="http://www.w3.org/2000/svg"><g></svg>'))
       .toThrow(expect.objectContaining({ code: 'SANITIZE_ERROR' }));

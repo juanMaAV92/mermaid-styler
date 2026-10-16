@@ -52,7 +52,10 @@ const REMOVED_ELEMENTS = [
 
 const invalidSvg = () => new MermaidRenderError('SANITIZE_ERROR', 'Mermaid returned an invalid SVG document.');
 
-export const sanitizeSvgElement = (svg: string): SVGSVGElement => {
+/** Filled in by `sanitizeSvgElement` so callers can tell the author what was removed (M2). */
+export type SanitizeReport = { droppedStyle: boolean };
+
+export const sanitizeSvgElement = (svg: string, report?: SanitizeReport): SVGSVGElement => {
   if (typeof DOMParser === 'undefined') throw invalidSvg();
 
   const document = new DOMParser().parseFromString(normalizeVoidElements(svg), 'image/svg+xml');
@@ -89,6 +92,7 @@ export const sanitizeSvgElement = (svg: string): SVGSVGElement => {
 
     if (element.tagName.toLowerCase() === 'style' && hasExternalCssReference(element.textContent ?? '')) {
       element.remove();
+      if (report) report.droppedStyle = true;
     }
   });
 
