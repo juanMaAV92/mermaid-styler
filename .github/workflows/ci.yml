@@ -115,7 +115,7 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: docker build -t mermaid-styler:ci .
-      - run: docker run -d --name mermaid-styler-ci -p 127.0.0.1:8080:80 mermaid-styler:ci
+      - run: docker run -d --name mermaid-styler-ci -p 127.0.0.1:8080:8080 mermaid-styler:ci
       - name: Verify HTTP contract
         run: |
           for attempt in $(seq 1 20); do

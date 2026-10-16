@@ -18,7 +18,7 @@ For the existing application select:
 | Dockerfile path | `Dockerfile` |
 | Domain | `mermaid-styler.duckdns.org` |
 | Path / internal path | `/` / `/` |
-| Container port | `80` |
+| Container port | `8080` |
 | HTTPS | Let's Encrypt, terminated at Traefik |
 | Health probe | GET `/healthz`, expected `200` and `ok` |
 
@@ -45,7 +45,7 @@ HTTPS certificate issuance remains Traefik's responsibility.
 
 ```sh
 docker build -t mermaid-styler:local .
-docker run -d --name mermaid-styler-local -p 127.0.0.1:8080:80 mermaid-styler:local
+docker run -d --name mermaid-styler-local -p 127.0.0.1:8080:8080 mermaid-styler:local
 npm run check:deployment -- http://127.0.0.1:8080
 PLAYWRIGHT_BASE_URL=http://127.0.0.1:8080 npx playwright test --project=chromium
 docker stop mermaid-styler-local
