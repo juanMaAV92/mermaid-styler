@@ -1,4 +1,4 @@
-FROM node:22.19.0-alpine@sha256:d2166de198f26e17e5a442f537754dd616ab069c47cc57b889310a717e0abbf9 AS build
+FROM node:26.11.1-alpine@sha256:143494b1da2945f061539253adc65e4f1569ddf07da2d384c022c791a9d90a4a AS build
 WORKDIR /app
 ENV ASTRO_TELEMETRY_DISABLED=1
 COPY package.json package-lock.json ./
