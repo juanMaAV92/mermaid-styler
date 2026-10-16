@@ -7,7 +7,7 @@ import { ERROR_REVEAL_MS, RENDER_DEBOUNCE_MS, isRenderState, type RenderState } 
 import { addSvgMetadata } from '../lib/export/svg';
 import { createArtifactActionHandler } from './artifact-actions';
 import { initPreviewControls } from './preview-controls';
-import { announce, createRenderStateController, type RenderStateOptions } from './render-state-controller';
+import { announceAction, createRenderStateController, type RenderStateOptions } from './render-state-controller';
 import { initThemeControls } from './theme-controls';
 
 type RenderStateEvent = RenderStateOptions & { state: RenderState };
@@ -76,7 +76,7 @@ if (workbench) {
     source: includeSourceToggle?.checked ? sourceInput?.value ?? '' : undefined,
   });
 
-  const announceArtifactAction = (message: string) => announce(liveStatus, message);
+  const announceArtifactAction = (message: string) => announceAction(liveStatus, message);
 
   initPreviewControls({
     viewport: previewViewport,
@@ -93,6 +93,7 @@ if (workbench) {
     stageStateViews,
     lastValidStamp,
     sourceFeedback,
+    sourceInput,
     sourceFeedbackTitle,
     sourceFeedbackBody,
     goToLineButton,

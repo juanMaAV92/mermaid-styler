@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import messages from '../../src/i18n/messages.en';
 import { RENDERING_OVERLAY_DELAY_MS } from '../../src/lib/ui/render-state';
-import { createRenderStateController } from '../../src/scripts/render-state-controller';
+import { announceAction, createRenderStateController } from '../../src/scripts/render-state-controller';
 
 const setup = () => {
   document.body.replaceChildren();
@@ -18,6 +18,11 @@ const setup = () => {
   const badge = document.createElement('span');
   const liveStatus = document.createElement('span');
   const button = document.createElement('button');
+  const sourceInput = document.createElement('textarea');
+  sourceInput.setAttribute('aria-describedby', 'source-hint source-feedback');
+  const feedbackTitle = document.createElement('strong');
+  const feedbackBody = document.createElement('pre');
+  feedback.append(feedbackTitle, feedbackBody);
   stage.append(readyView, renderingView, emptyView, stamp);
   workbench.append(stage, feedback, badge, liveStatus, button);
   document.body.append(workbench);
@@ -27,12 +32,15 @@ const setup = () => {
     stageStateViews: [readyView, renderingView, emptyView],
     lastValidStamp: stamp,
     sourceFeedback: feedback,
+    sourceFeedbackTitle: feedbackTitle,
+    sourceFeedbackBody: feedbackBody,
+    sourceInput,
     stateBadge: badge,
     liveStatus,
     actionButtons: [button],
     messages,
   });
-  return { controller, workbench, stage, readyView, renderingView, stamp, feedback, badge, liveStatus, button };
+  return { controller, workbench, stage, readyView, renderingView, stamp, feedback, feedbackTitle, feedbackBody, sourceInput, badge, liveStatus, button };
 };
 
 describe('render state controller', () => {
@@ -96,5 +104,44 @@ describe('render state controller', () => {
     expect(ui.liveStatus.textContent).toBe(text);
     ui.controller.setRenderState('ready', { hasArtifact: true });
     expect(ui.liveStatus.firstChild).toBe(node);
+  });
+
+  it('announces a repeated action confirmation every time', () => {
+    const ui = setup();
+    const updates: string[] = [];
+    new MutationObserver(() => updates.push(ui.liveStatus.textContent ?? '')).observe(ui.liveStatus, { childList: true, characterData: true, subtree: true });
+    announceAction(ui.liveStatus, 'SVG copied.');
+    vi.runAllTimers();
+    expect(ui.liveStatus.textContent).toBe('SVG copied.');
+    announceAction(ui.liveStatus, 'SVG copied.');
+    expect(ui.liveStatus.textContent).toBe('');
+    vi.runAllTimers();
+    expect(ui.liveStatus.textContent).toBe('SVG copied.');
+  });
+
+  it('describes the editor with the feedback only while an error is revealed', () => {
+    const ui = setup();
+    ui.controller.setRenderState('ready', { hasArtifact: true });
+    expect(ui.sourceInput.getAttribute('aria-describedby')).toBe('source-hint');
+    expect(ui.feedbackTitle.textContent).toBe('');
+    expect(ui.feedbackBody.textContent).toBe('');
+    ui.controller.setRenderState('rendering', { editing: true });
+    expect(ui.sourceInput.getAttribute('aria-describedby')).toBe('source-hint');
+    ui.controller.setRenderState('error', { title: 'Syntax error on line 2', detail: 'Parse error' });
+    expect(ui.sourceInput.getAttribute('aria-describedby')).toBe('source-hint source-feedback');
+    expect(ui.feedbackTitle.textContent).toBe('Syntax error on line 2');
+    ui.controller.setRenderState('ready', { hasArtifact: true });
+    expect(ui.sourceInput.getAttribute('aria-describedby')).toBe('source-hint');
+    expect(ui.feedbackTitle.textContent).toBe('');
+    expect(ui.feedbackBody.textContent).toBe('');
+  });
+
+  it('includes the error title in the announcement so consecutive different errors are both announced', () => {
+    const ui = setup();
+    ui.controller.setRenderState('ready', { hasArtifact: true });
+    ui.controller.setRenderState('error', { title: 'Syntax error on line 2' });
+    expect(ui.liveStatus.textContent).toContain('Syntax error on line 2');
+    ui.controller.setRenderState('error', { title: 'Syntax error on line 3' });
+    expect(ui.liveStatus.textContent).toContain('Syntax error on line 3');
   });
 });

@@ -36,6 +36,7 @@ type RenderStateControllerOptions = {
   stageStateViews: HTMLElement[];
   lastValidStamp?: HTMLElement | null;
   sourceFeedback?: HTMLElement | null;
+  sourceInput?: HTMLTextAreaElement | null;
   sourceFeedbackTitle?: HTMLElement | null;
   sourceFeedbackBody?: HTMLElement | null;
   goToLineButton?: HTMLButtonElement | null;
@@ -47,10 +48,31 @@ type RenderStateControllerOptions = {
 
 export const RENDERING_OVERLAY_CLASS = 'stage-rendering-overlay';
 
-/** Writes to the single live region only when the text actually changes, so each distinct message is announced once. */
+/** Render-state announcements: write to the single live region only when the text changes, so each distinct state is announced once. */
 export const announce = (liveStatus: HTMLElement | null | undefined, text: string) => {
   if (liveStatus && liveStatus.textContent !== text) liveStatus.textContent = text;
 };
+
+const ACTION_ANNOUNCE_DELAY_MS = 50;
+const pendingActionAnnouncements = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>();
+
+/**
+ * Action confirmations (copy/export) must be announced every time, even when the text repeats:
+ * clear the live region, then set the text on a later task so assistive tech sees a change.
+ */
+export const announceAction = (liveStatus: HTMLElement | null | undefined, text: string) => {
+  if (!liveStatus) return;
+  const pending = pendingActionAnnouncements.get(liveStatus);
+  if (pending) clearTimeout(pending);
+  liveStatus.textContent = '';
+  pendingActionAnnouncements.set(liveStatus, setTimeout(() => {
+    pendingActionAnnouncements.delete(liveStatus);
+    liveStatus.textContent = text;
+  }, ACTION_ANNOUNCE_DELAY_MS));
+};
+
+const SOURCE_HINT_ID = 'source-hint';
+const SOURCE_FEEDBACK_ID = 'source-feedback';
 
 export const createRenderStateController = ({
   workbench,
@@ -60,6 +82,7 @@ export const createRenderStateController = ({
   stageStateViews,
   lastValidStamp,
   sourceFeedback,
+  sourceInput,
   sourceFeedbackTitle,
   sourceFeedbackBody,
   goToLineButton,
@@ -123,13 +146,18 @@ export const createRenderStateController = ({
     }
     // Rendering and editing are transient; only settled states reach the live region.
     if (!isRendering && !editing) {
-      announce(liveStatus, `${messages.statusAnnounce}: ${copy.label}. ${options.message ?? copy.caption}`);
+      const errorTitle = isError && options.title ? `${options.title}. ` : '';
+      announce(liveStatus, `${messages.statusAnnounce}: ${copy.label}. ${errorTitle}${options.message ?? copy.caption}`);
     }
 
     if (sourceFeedback) sourceFeedback.hidden = !isError;
-    if (sourceFeedbackTitle) sourceFeedbackTitle.textContent = options.title ?? copy.label;
+    // The editor references the feedback only while an error is revealed, so a hidden or stale message is never read on focus.
+    sourceInput?.setAttribute('aria-describedby', isError ? `${SOURCE_HINT_ID} ${SOURCE_FEEDBACK_ID}` : SOURCE_HINT_ID);
+    if (sourceFeedbackTitle) sourceFeedbackTitle.textContent = isError ? options.title ?? copy.label : '';
     if (sourceFeedbackBody) {
-      sourceFeedbackBody.textContent = options.detail ?? (state === 'timeout' ? messages.timeoutStateHint : messages.errorFallback);
+      sourceFeedbackBody.textContent = isError
+        ? options.detail ?? (state === 'timeout' ? messages.timeoutStateHint : messages.errorFallback)
+        : '';
     }
 
     if (goToLineButton) {
