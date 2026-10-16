@@ -159,4 +159,28 @@ test.describe('Mermaid Styler hardening', () => {
     await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', 'ready', { timeout: 10_000 });
     await expect(page.locator('[data-svg-host] svg')).toBeVisible();
   });
+
+  test('AUD-013: fontFamily directive cannot smuggle external CSS into the SVG', async ({ page }) => {
+    const externalRequests: string[] = [];
+    const origin = new URL(process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:4322').origin;
+    const record = (url: string) => {
+      if (!url.startsWith(origin) && !url.startsWith('data:') && !url.startsWith('blob:')) externalRequests.push(url);
+    };
+    page.on('request', (request) => record(request.url()));
+    page.on('requestfailed', (request) => record(request.url()));
+    await page.goto('/');
+    const before = await page.locator('[data-svg-host] svg').evaluate((svg) => svg.outerHTML);
+    await page.locator('[data-source-input]').fill(
+      '%%{init: {"fontFamily": "x; background-image: \\\\75 rl(https://evil.example/a.png)"}}%%\nflowchart LR\n  A --> B',
+    );
+    await expect.poll(
+      () => page.locator('[data-svg-host] svg').evaluate((svg) => svg.outerHTML),
+      { timeout: 10_000 },
+    ).not.toBe(before);
+    await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', 'ready');
+    const markup = await page.locator('[data-svg-host] svg').evaluate((svg) => svg.outerHTML);
+    expect(externalRequests).toEqual([]);
+    expect(markup).not.toContain('evil.example');
+    expect(markup).not.toContain('\\75 rl');
+  });
 });

@@ -16,6 +16,12 @@ describe('SVG sanitization rules', () => {
     ['fill: image-set("https://x/a.png" 1x)', true],
     ['src("https://x/f.woff")', true],
     ['fill: url(#grad)', false],
+    ['\\75 rl(https://x)', true],
+    ['u\\72l(https://x)', true],
+    ['@\\69mport "x"', true],
+    ['URL(https://x)', true],
+    ['-webkit-image-set("https://x" 1x)', true],
+    ['@import url(x)', true],
     ['stroke: none', false],
   ])('AUD-013: detects external CSS references: %s', (value, expected) => {
     expect(hasExternalCssReference(value)).toBe(expected);

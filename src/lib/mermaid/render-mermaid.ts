@@ -46,6 +46,8 @@ export const MERMAID_SECURE_KEYS = [
   'suppressErrorRendering',
   'maxEdges',
   'themeCSS',
+  'fontFamily',
+  'altFontFamily',
 ] as const;
 
 export const renderMermaid = async (

@@ -3,7 +3,18 @@ import { MermaidRenderError } from './types';
 
 const isFragmentReference = (value: string) => value.trim().startsWith('#');
 
-export const hasExternalCssReference = (value: string): boolean => {
+// CSS tokenizers decode escapes (`\75 rl(`) and drop comments before
+// matching, so do the same before looking for external references.
+const normalizeCss = (value: string): string => value
+  .replace(/\/\*[\s\S]*?\*\//g, '')
+  .replace(/\\([0-9a-fA-F]{1,6})\s?|\\([\s\S])/g, (_match, hex?: string, char?: string) => {
+    if (char !== undefined) return char;
+    const codePoint = Number.parseInt(hex ?? '', 16);
+    return codePoint > 0 && codePoint <= 0x10ffff ? String.fromCodePoint(codePoint) : '\ufffd';
+  });
+
+export const hasExternalCssReference = (raw: string): boolean => {
+  const value = normalizeCss(raw);
   const urls = [...value.matchAll(/url\(\s*(['"]?)(.*?)\1\s*\)/gi)].map((match) => match[2].trim());
   if (urls.some((url) => url && !isFragmentReference(url))) return true;
   return /image-set\([^)]*['"]/i.test(value)
