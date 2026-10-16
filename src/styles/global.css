@@ -212,6 +212,97 @@ input:focus-visible {
   background: var(--graphite-raised);
 }
 
+.button__format {
+  font-family: var(--font-code);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.export-group {
+  display: flex;
+}
+
+.export-split {
+  display: flex;
+}
+
+.export-split .button {
+  border-radius: 0;
+}
+
+.export-split .export-split__main {
+  border-start-start-radius: var(--radius-sm);
+  border-end-start-radius: var(--radius-sm);
+}
+
+.export-split .export-split__copy {
+  min-width: var(--control-target);
+  padding: 0;
+  border-start-end-radius: var(--radius-sm);
+  border-end-end-radius: var(--radius-sm);
+}
+
+.export-split--secondary .button {
+  color: var(--steel-light);
+  background: transparent;
+  border-color: var(--line);
+}
+
+.export-split--secondary .export-split__copy {
+  border-inline-start-width: 0;
+}
+
+.export-split--secondary .button:not(:disabled):hover {
+  color: var(--paper);
+  border-color: var(--steel);
+  background: var(--graphite-raised);
+}
+
+.export-split--primary .button {
+  color: var(--ink);
+  background: var(--signal-cyan);
+}
+
+.export-split--primary .export-split__copy {
+  border-inline-start: var(--border-thin) solid var(--line);
+}
+
+.export-split--primary .button:not(:disabled):hover {
+  background: var(--signal-cyan-soft);
+}
+
+.export-menu {
+  display: none;
+}
+
+.export-menu__toggle {
+  min-width: var(--control-target);
+}
+
+.export-menu__list {
+  position: fixed;
+  inset: auto;
+  top: 68px;
+  right: var(--space-4);
+  margin: 0;
+  padding: var(--space-2);
+  min-width: 160px;
+  border: var(--border-thin) solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--graphite-raised);
+  color: var(--paper);
+}
+
+.export-menu__list:popover-open {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.export-menu__list .button {
+  justify-content: flex-start;
+}
+
 .button--quiet {
   color: var(--steel);
   background: transparent;
@@ -1012,13 +1103,12 @@ input:focus-visible {
     display: none;
   }
 
-  .topbar-actions .button span {
+  .export-split {
     display: none;
   }
 
-  .topbar-actions .button {
-    width: var(--control-target);
-    padding: 0;
+  .export-menu {
+    display: block;
   }
 
   .topbar {
@@ -1136,5 +1226,25 @@ input:focus-visible {
 
   .preview-layer {
     transition: none;
+  }
+}
+
+@supports (anchor-name: --a) {
+  .export-menu__toggle[popovertarget='export-menu-svg'] { anchor-name: --export-svg; }
+  .export-menu__toggle[popovertarget='export-menu-png'] { anchor-name: --export-png; }
+
+  #export-menu-svg {
+    position-anchor: --export-svg;
+  }
+
+  #export-menu-png {
+    position-anchor: --export-png;
+  }
+
+  .export-menu__list {
+    top: calc(anchor(bottom) + var(--space-2));
+    right: auto;
+    left: anchor(left);
+    position-try-fallbacks: flip-inline;
   }
 }

@@ -66,7 +66,7 @@ test.describe('Mermaid Styler hardening', () => {
 
     await editor.fill(htmlLabelFlowchart);
     await waitForReady(page, previousSvgMarkup);
-    await expect(page.getByRole('button', { name: 'Export SVG' })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Download SVG' })).toBeEnabled();
     await expect(page.locator('[data-source-feedback]')).toBeHidden();
   });
 
@@ -83,7 +83,7 @@ test.describe('Mermaid Styler hardening', () => {
     await expect(page.locator('[data-artifact-stage]')).toHaveClass(/is-transparent/);
 
     const svgDownload = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'Export SVG' }).click();
+    await page.getByRole('button', { name: 'Download SVG' }).click();
     const svg = await svgDownload;
     const svgPath = await svg.path();
     if (!svgPath) throw new Error('SVG download path is unavailable.');
@@ -95,7 +95,7 @@ test.describe('Mermaid Styler hardening', () => {
 
     await page.getByRole('checkbox', { name: 'Include Mermaid source in SVG' }).check();
     const sourceSvgDownload = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'Export SVG' }).click();
+    await page.getByRole('button', { name: 'Download SVG' }).click();
     const sourceSvg = await sourceSvgDownload;
     const sourceSvgPath = await sourceSvg.path();
     if (!sourceSvgPath) throw new Error('SVG download path is unavailable.');
@@ -104,7 +104,7 @@ test.describe('Mermaid Styler hardening', () => {
     expect(sourceSvgContent).toContain('🚀');
 
     const pngDownload = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'Export PNG' }).click();
+    await page.getByRole('button', { name: 'Download PNG' }).click();
     const png = await pngDownload;
     const pngPath = await png.path();
     if (!pngPath) throw new Error('PNG download path is unavailable.');
@@ -168,7 +168,7 @@ test.describe('Mermaid Styler hardening', () => {
 
     await page.getByRole('checkbox', { name: 'Include Mermaid source in SVG' }).check();
     const download = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'Export SVG' }).click();
+    await page.getByRole('button', { name: 'Download SVG' }).click();
     const content = await readDownload(await download);
     expect(content).toContain('SourceAlpha');
     expect(content).not.toContain('SourceBeta');
@@ -177,7 +177,7 @@ test.describe('Mermaid Styler hardening', () => {
     await expect(page.locator('[data-source-feedback]')).toBeHidden({ timeout: 10_000 });
     await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', 'ready');
     await expect(buttons.first()).not.toHaveAttribute('data-stale', /.*/);
-    await expect(buttons.first()).toHaveAttribute('title', 'Copy SVG');
+    await expect(buttons.first()).toHaveAttribute('title', 'Download SVG');
   });
 
   test('AUD-019: exported SVG with HTML labels is well-formed XML', async ({ page, context, browserName }) => {
@@ -194,7 +194,7 @@ test.describe('Mermaid Styler hardening', () => {
     }, text);
 
     const download = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'Export SVG' }).click();
+    await page.getByRole('button', { name: 'Download SVG' }).click();
     const parsed = await parse(await readDownload(await download));
     expect(parsed).toEqual({ root: 'svg', errors: 0 });
 

@@ -285,7 +285,11 @@ if (workbench) {
 
   updateSourceCount();
   actionButtons.forEach((button) => {
-    button.addEventListener('click', () => void handleArtifactAction(button.dataset.action ?? ''));
+    button.addEventListener('click', () => {
+      const menu = button.closest<HTMLElement>('[popover]');
+      if (menu?.matches(':popover-open')) menu.hidePopover();
+      void handleArtifactAction(button.dataset.action ?? '');
+    });
     button.disabled = true;
   });
   requestRender();

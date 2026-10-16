@@ -1,0 +1,45 @@
+---
+import Icon from './Icon.astro';
+
+interface Props {
+  format: 'SVG' | 'PNG';
+  variant: 'primary' | 'secondary';
+  downloadLabel: string;
+  copyLabel: string;
+  optionsLabel: string;
+  downloadText: string;
+  copyText: string;
+}
+
+const { format, variant, downloadLabel, copyLabel, optionsLabel, downloadText, copyText } = Astro.props;
+const key = format.toLowerCase() as 'svg' | 'png';
+const menuId = `export-menu-${key}`;
+---
+
+<div class="export-group">
+  <div class={`export-split export-split--${variant}`} role="group" aria-label={format}>
+    <button class="button export-split__main" type="button" disabled aria-label={downloadLabel} title={downloadLabel} data-action={`export-${key}`}>
+      <Icon name={`export-${key}`} />
+      <span class="button__format">{format}</span>
+    </button>
+    <button class="button export-split__copy" type="button" disabled aria-label={copyLabel} title={copyLabel} data-action={`copy-${key}`}>
+      <Icon name={`copy-${key}`} />
+    </button>
+  </div>
+  <div class="export-menu">
+    <button class={`button button--${variant} export-menu__toggle`} type="button" popovertarget={menuId} aria-label={optionsLabel}>
+      <span class="button__format">{format}</span>
+      <Icon name="chevron" />
+    </button>
+    <div id={menuId} popover="auto" class="export-menu__list" role="group" aria-label={optionsLabel}>
+      <button class="button button--secondary" type="button" disabled aria-label={downloadLabel} title={downloadLabel} data-action={`export-${key}`}>
+        <Icon name={`export-${key}`} />
+        <span>{downloadText}</span>
+      </button>
+      <button class="button button--secondary" type="button" disabled aria-label={copyLabel} title={copyLabel} data-action={`copy-${key}`}>
+        <Icon name={`copy-${key}`} />
+        <span>{copyText}</span>
+      </button>
+    </div>
+  </div>
+</div>

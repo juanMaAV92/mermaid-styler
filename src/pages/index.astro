@@ -1,5 +1,6 @@
 ---
 import Button from '../components/ui/Button.astro';
+import ExportGroup from '../components/ui/ExportGroup.astro';
 import Icon from '../components/ui/Icon.astro';
 import StatusBadge from '../components/ui/StatusBadge.astro';
 import ArtifactStage from '../components/mermaid/ArtifactStage.astro';
@@ -42,10 +43,8 @@ const defaultThemeStyle = Object.entries(toThemeVariables(defaultPreset))
         </div>
         <span class="sr-only" data-live-status role="status" aria-live="polite">{messages.statusAnnounce}: {messages.stateRendering}</span>
         <div class="topbar-actions">
-          <Button label={messages.copySvg} icon="copy" variant="secondary" disabled data-action="copy-svg" />
-          <Button label={messages.exportSvg} icon="download" variant="secondary" disabled data-action="export-svg" />
-          <Button label={messages.copyPng} icon="copy" variant="secondary" disabled data-action="copy-png" />
-          <Button label={messages.exportPng} icon="download" variant="primary" disabled data-action="export-png" />
+          <ExportGroup format="SVG" variant="secondary" downloadLabel={messages.downloadSvg} copyLabel={messages.copySvg} optionsLabel={messages.svgExportOptions} downloadText={messages.menuDownload} copyText={messages.menuCopy} />
+          <ExportGroup format="PNG" variant="primary" downloadLabel={messages.downloadPng} copyLabel={messages.copyPng} optionsLabel={messages.pngExportOptions} downloadText={messages.menuDownload} copyText={messages.menuCopy} />
         </div>
       </header>
 

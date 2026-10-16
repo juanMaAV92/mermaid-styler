@@ -18,7 +18,7 @@ test.describe('Cross-browser smoke', () => {
     await expect(stage).toHaveAttribute('data-render-state', 'ready', { timeout: 10_000 });
 
     const pngDownload = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'Export PNG' }).click();
+    await page.getByRole('button', { name: 'Download PNG' }).click();
     const pngPath = await (await pngDownload).path();
     if (!pngPath) throw new Error('PNG download path is unavailable.');
     expect((await readFile(pngPath)).subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));

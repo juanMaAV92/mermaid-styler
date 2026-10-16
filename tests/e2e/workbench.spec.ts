@@ -21,20 +21,20 @@ test.describe('Mermaid Styler workbench', () => {
       })
     )).toBe(true);
     await expect(page.getByRole('button', { name: 'Copy SVG' })).toBeEnabled();
-    await expect(page.getByRole('button', { name: 'Export SVG' })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Download SVG' })).toBeEnabled();
     await expect(page.getByRole('button', { name: 'Copy PNG' })).toBeEnabled();
-    await expect(page.getByRole('button', { name: 'Export PNG' })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Download PNG' })).toBeEnabled();
   });
 
   test('downloads SVG and PNG artifacts from the rendered preview', async ({ page }) => {
     await page.goto('/');
 
     const svgDownload = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'Export SVG' }).click();
+    await page.getByRole('button', { name: 'Download SVG' }).click();
     await expect((await svgDownload).suggestedFilename()).toBe('mermaid-diagram.svg');
 
     const pngDownload = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'Export PNG' }).click();
+    await page.getByRole('button', { name: 'Download PNG' }).click();
     await expect((await pngDownload).suggestedFilename()).toBe('mermaid-diagram.png');
   });
 
@@ -64,7 +64,7 @@ test.describe('Mermaid Styler workbench', () => {
     await expect(page.locator('[data-last-valid-stamp]')).toBeVisible();
     await expect(page.locator('[data-last-valid-stamp]')).toHaveText(/last valid/i);
     await expect(page.locator('[data-source-feedback]')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Export SVG' })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Download SVG' })).toBeEnabled();
   });
 
   test('updates the rendered SVG when a color control changes', async ({ page }) => {
@@ -166,8 +166,9 @@ test.describe('Mermaid Styler workbench', () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/');
 
+    await page.getByRole('button', { name: 'PNG export options' }).click();
     const pngDownload = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'Export PNG' }).click();
+    await page.getByRole('button', { name: 'Download PNG' }).click();
     const pngPath = await (await pngDownload).path();
     if (!pngPath) throw new Error('PNG download path is unavailable.');
 
@@ -442,5 +443,49 @@ test.describe('Mermaid Styler workbench', () => {
     await renderSource(page, chain('LR', 40));
     await expect(page.locator('[data-preview-large-hint]')).toBeVisible();
     await expect(page.locator('[data-preview-large-hint]')).toHaveCSS('font-size', '11px');
+  });
+
+  test('AUD-021: export actions are unambiguous on desktop', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/');
+    const names = ['Download SVG', 'Copy SVG', 'Download PNG', 'Copy PNG'];
+    for (const name of names) {
+      await expect(page.locator('.topbar-actions').getByRole('button', { name, exact: true })).toBeVisible();
+    }
+    await expect(page.locator('.topbar-actions button:visible')).toHaveCount(4);
+  });
+
+  test('AUD-021: export actions are unambiguous on mobile', async ({ page, context, baseURL }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: baseURL });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+    await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', 'ready', { timeout: 10_000 });
+
+    const visible = page.locator('.topbar-actions button:visible');
+    await expect(visible).toHaveCount(2);
+    const names: string[] = [];
+    for (let i = 0; i < 2; i += 1) {
+      const button = visible.nth(i);
+      names.push((await button.getAttribute('aria-label')) ?? '');
+      expect(((await button.innerText()) ?? '').trim().length).toBeGreaterThan(0);
+      const box = await button.boundingBox();
+      expect(box!.width).toBeGreaterThanOrEqual(44);
+      expect(box!.height).toBeGreaterThanOrEqual(44);
+    }
+    expect(new Set(names).size).toBe(2);
+    expect(await page.locator('.topbar-actions button:visible').allInnerTexts()).toEqual(['SVG', 'PNG']);
+
+    await page.getByRole('button', { name: 'PNG export options' }).click();
+    const download = page.getByRole('button', { name: 'Download PNG' });
+    const copy = page.getByRole('button', { name: 'Copy PNG' });
+    await expect(download).toBeVisible();
+    await expect(copy).toBeVisible();
+    for (const item of [download, copy]) {
+      const box = await item.boundingBox();
+      expect(box!.height).toBeGreaterThanOrEqual(44);
+    }
+    await copy.click();
+    await expect(page.locator('[data-live-status]')).toHaveText(/PNG copied/);
+    await expect(copy).toBeHidden();
   });
 });

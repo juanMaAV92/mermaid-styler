@@ -1,6 +1,6 @@
 ---
 interface Props {
-  name: 'copy' | 'download' | 'reset' | 'spark' | 'arrow';
+  name: 'copy' | 'download' | 'reset' | 'spark' | 'arrow' | 'copy-svg' | 'copy-png' | 'export-svg' | 'export-png' | 'chevron';
   size?: number;
 }
 
@@ -33,5 +33,36 @@ const { name, size = 16 } = Astro.props;
 {name === 'arrow' && (
   <svg class="icon" width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
     <path d="M5 12h13m-5-5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+  </svg>
+)}
+{name === 'copy-svg' && (
+  <svg class="icon" width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+    <rect x="3.5" y="3.5" width="17" height="17" rx="2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M10 9l-3 3 3 3M14 9l3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+  </svg>
+)}
+{name === 'copy-png' && (
+  <svg class="icon" width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+    <rect x="3.5" y="3.5" width="17" height="17" rx="2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M7 17l3-3 2 2 2.5-3 1.5 2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+    <circle cx="9" cy="9" r="1" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+  </svg>
+)}
+{name === 'export-svg' && (
+  <svg class="icon" width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M12 3v10m0 0 3.5-3.5M12 13 8.5 9.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M9 17.5l-2 1.5 2 1.5M15 17.5l2 1.5-2 1.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+  </svg>
+)}
+{name === 'export-png' && (
+  <svg class="icon" width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M12 3v10m0 0 3.5-3.5M12 13 8.5 9.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+    <rect x="4" y="16" width="16" height="5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M7 19.5l2-2 1.5 1.5 2-2.5 2 3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+  </svg>
+)}
+{name === 'chevron' && (
+  <svg class="icon" width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+    <path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
   </svg>
 )}
