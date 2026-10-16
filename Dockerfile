@@ -1,7 +1,7 @@
 FROM node:22.19.0-alpine AS build
 WORKDIR /app
 ENV ASTRO_TELEMETRY_DISABLED=1
-COPY package.json package-lock.json .npmrc ./
+COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
 RUN npm run typecheck && npm run build && npm run check:bundle
