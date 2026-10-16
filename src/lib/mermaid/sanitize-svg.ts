@@ -3,9 +3,12 @@ import { MermaidRenderError } from './types';
 
 const isFragmentReference = (value: string) => value.trim().startsWith('#');
 
-export const hasExternalCssUrl = (value: string): boolean => {
+export const hasExternalCssReference = (value: string): boolean => {
   const urls = [...value.matchAll(/url\(\s*(['"]?)(.*?)\1\s*\)/gi)].map((match) => match[2].trim());
-  return urls.some((url) => url && !isFragmentReference(url));
+  if (urls.some((url) => url && !isFragmentReference(url))) return true;
+  return /image-set\([^)]*['"]/i.test(value)
+    || /@import\b/i.test(value)
+    || /(?<![\w-])src\(/i.test(value);
 };
 
 // Mermaid renders HTML labels inside `foreignObject`. Browsers accept `<br>`,
@@ -48,13 +51,13 @@ export const sanitizeSvg = (svg: string): string => {
       if (
         name.startsWith('on')
         || (name === 'href' || name === 'xlink:href' || name === 'src' || name === 'srcset')
-        || hasExternalCssUrl(value)
+        || hasExternalCssReference(value)
       ) {
         element.removeAttribute(attribute.name);
       }
     });
 
-    if (element.tagName.toLowerCase() === 'style' && hasExternalCssUrl(element.textContent ?? '')) {
+    if (element.tagName.toLowerCase() === 'style' && hasExternalCssReference(element.textContent ?? '')) {
       element.remove();
     }
   });

@@ -27,6 +27,7 @@ const fixtures = [
 ];
 
 const htmlLabelFlowchart = readFileSync(new URL('../fixtures/diagrams/html-label-flowchart.mmd', import.meta.url), 'utf8');
+const themeCssImageSet = readFileSync(new URL('../fixtures/adversarial/mermaid/themecss-image-set.mmd', import.meta.url), 'utf8');
 
 const waitForReady = async (page: Page, previousSvgMarkup?: string) => {
   if (previousSvgMarkup) {
@@ -135,5 +136,27 @@ test.describe('Mermaid Styler hardening', () => {
     expect(resources.canvases).toBe(0);
     expect(Date.now() - startedAt).toBeLessThan(20_000);
     test.info().annotations.push({ type: 'resource-audit', description: JSON.stringify(resources) });
+  });
+
+  test('AUD-013: themeCSS directive triggers no external request', async ({ page }) => {
+    const externalRequests: string[] = [];
+    const origin = new URL(process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:4322').origin;
+    const record = (url: string, errorText = '') => {
+      if (!url.startsWith(origin) && !url.startsWith('data:') && !url.startsWith('blob:')) externalRequests.push(`${url} ${errorText}`.trim());
+    };
+    page.on('request', (request) => record(request.url()));
+    page.on('requestfailed', (request) => record(request.url(), request.failure()?.errorText ?? ''));
+    await page.goto('/');
+    await page.locator('[data-source-input]').fill(themeCssImageSet);
+    await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', 'ready', { timeout: 10_000 });
+    await expect(page.locator('[data-svg-host] svg')).toBeVisible();
+    expect(externalRequests).toEqual([]);
+  });
+
+  test('AUD-013: default secure keys stay protected', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('[data-source-input]').fill('%%{init: {"maxEdges": 2}}%%\nflowchart LR\n  A --> B\n  B --> C\n  C --> D');
+    await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', 'ready', { timeout: 10_000 });
+    await expect(page.locator('[data-svg-host] svg')).toBeVisible();
   });
 });

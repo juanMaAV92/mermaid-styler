@@ -30,7 +30,7 @@ describe('adversarial fixture manifest', () => {
   );
 
   it('lists every fixture file on disk', () => {
-    const onDisk = ['svg', 'mermaid'].flatMap((dir) => readdirSync(resolve(fixturesDir, dir)).map((name) => `${dir}/${name}`));
+    const onDisk = ['svg', 'mermaid'].flatMap((dir) => readdirSync(resolve(fixturesDir, dir)).filter((name) => !name.startsWith('.')).map((name) => `${dir}/${name}`));
     expect(onDisk.sort()).toEqual(adversarialFixtures.map((fixture) => fixture.file).sort());
   });
 });

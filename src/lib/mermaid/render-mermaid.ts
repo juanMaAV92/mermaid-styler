@@ -38,6 +38,16 @@ const temporaryContainer = (): HTMLDivElement => {
   return container;
 };
 
+export const MERMAID_SECURE_KEYS = [
+  'secure',
+  'securityLevel',
+  'startOnLoad',
+  'maxTextSize',
+  'suppressErrorRendering',
+  'maxEdges',
+  'themeCSS',
+] as const;
+
 export const renderMermaid = async (
   source: string,
   options: RenderMermaidOptions,
@@ -52,6 +62,7 @@ export const renderMermaid = async (
     mermaid.initialize({
       startOnLoad: false,
       securityLevel: 'strict',
+      secure: [...MERMAID_SECURE_KEYS],
       theme: 'base',
       maxTextSize: maxSourceLength,
       themeVariables: {

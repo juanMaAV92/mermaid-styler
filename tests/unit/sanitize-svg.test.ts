@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hasExternalCssUrl, normalizeMermaidLineBreaks, sanitizeSvg } from '../../src/lib/mermaid/sanitize-svg';
+import { hasExternalCssReference, normalizeMermaidLineBreaks, sanitizeSvg } from '../../src/lib/mermaid/sanitize-svg';
 
 describe('SVG sanitization rules', () => {
   it.each([
@@ -8,7 +8,17 @@ describe('SVG sanitization rules', () => {
     ['fill: url(#local-gradient)', false],
     ['stroke: none', false],
   ])('identifies external CSS URL references: %s', (value, expected) => {
-    expect(hasExternalCssUrl(value)).toBe(expected);
+    expect(hasExternalCssReference(value)).toBe(expected);
+  });
+
+  it.each([
+    ['@import "https://x/y.css";', true],
+    ['fill: image-set("https://x/a.png" 1x)', true],
+    ['src("https://x/f.woff")', true],
+    ['fill: url(#grad)', false],
+    ['stroke: none', false],
+  ])('AUD-013: detects external CSS references: %s', (value, expected) => {
+    expect(hasExternalCssReference(value)).toBe(expected);
   });
 
   it('normalizes Mermaid HTML line breaks without changing self-closing tags', () => {

@@ -12,8 +12,8 @@ export type AdversarialFixture = {
 // test runs them with `it.fails`; remove the flag when the fix lands.
 // Mermaid fixtures (`kind: 'mermaid'`) are consumed by E2E tests only.
 export const adversarialFixtures: AdversarialFixture[] = [
-  { id: 'css-import-string', file: 'svg/css-import-string.svg', kind: 'svg', audit: 'AUD-013', mustNotContain: ['evil.example'], mustContain: ['safe-css-import'], pending: true },
-  { id: 'css-image-set', file: 'svg/css-image-set.svg', kind: 'svg', audit: 'AUD-013', mustNotContain: ['evil.example'], mustContain: ['safe-image-set'], pending: true },
+  { id: 'css-import-string', file: 'svg/css-import-string.svg', kind: 'svg', audit: 'AUD-013', mustNotContain: ['evil.example'], mustContain: ['safe-css-import'] },
+  { id: 'css-image-set', file: 'svg/css-image-set.svg', kind: 'svg', audit: 'AUD-013', mustNotContain: ['evil.example'], mustContain: ['safe-image-set'] },
   { id: 'css-url-external', file: 'svg/css-url-external.svg', kind: 'svg', audit: 'AUD-003', mustNotContain: ['evil.example'], mustContain: ['safe-url-external'] },
   { id: 'foreignobject-img-unclosed', file: 'svg/foreignobject-img-unclosed.svg', kind: 'svg', audit: 'AUD-017', mustNotContain: ['evil.example', '<img'], mustContain: ['safe-foreign-img', '>ok<'], pending: true },
   { id: 'void-hr-unclosed', file: 'svg/void-hr-unclosed.svg', kind: 'svg', audit: 'AUD-017', mustNotContain: [], mustContain: ['safe-void-hr', 'after-hr', '<hr'], pending: true },
