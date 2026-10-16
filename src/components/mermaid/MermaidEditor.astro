@@ -7,7 +7,6 @@ interface Props {
     inputLabel: string;
     source: string;
     sourceCount: string;
-    renderLater: string;
     errorDetails: string;
     errorFallback: string;
     goToLine: string;
@@ -46,6 +45,5 @@ const { source, sourceHint, placeholder, labels } = Astro.props;
   </div>
   <div class="panel-foot">
     <span id="source-hint">{sourceHint}</span>
-    <span class="keyboard-hint"><kbd>⌘</kbd><kbd>↵</kbd> {labels.renderLater}</span>
   </div>
 </section>

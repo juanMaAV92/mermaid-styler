@@ -23,9 +23,12 @@ For the existing application select:
 | HTTPS | Let's Encrypt, terminated at Traefik |
 | Health probe | GET `/healthz`, expected `200` and `ok` |
 
-> **Warning:** this image listens on `8080` (nginx-unprivileged). The container
-> port in Dokploy must change from `80` to `8080` in the same deploy that ships
-> this image; otherwise Traefik routes to a closed port and the site returns 502.
+> **Warning:** this image listens on `8080` (nginx-unprivileged), so the
+> Dokploy domain port must be `8080`. The owner has already configured Dokploy
+> with Build Type = Dockerfile and domain port `8080`; no port change is needed
+> at merge time. Deploying a commit whose Dockerfile still listens on `80`
+> (`main` before AUD-014) against port `8080` returns 502; that is the expected
+> state until the `fix/audit-2026-10-15` branch merges.
 
 Publish Directory is not used in Dockerfile mode. Remove redundant build/start
 overrides; the Dockerfile owns these. No Railpack Node environment variable is

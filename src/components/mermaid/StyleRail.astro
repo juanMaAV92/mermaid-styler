@@ -2,7 +2,7 @@
 import ColorField from '../ui/ColorField.astro';
 import Icon from '../ui/Icon.astro';
 import PresetList from './PresetList.astro';
-import { defaultPreset, presetIds, presets as themePresets } from '../../lib/theme/presets';
+import { DEFAULT_PRESET_ID, defaultPreset, presetIds, presets as themePresets } from '../../lib/theme/presets';
 import { DEFAULT_DIAGRAM_FONT_SIZE } from '../../lib/theme/defaults';
 
 interface Props {
@@ -55,7 +55,7 @@ const presets = presetIds.map((id) => ({
       <span class="panel-label">{labels.controlSurfaceLabel}</span>
       <h2 id="style-title">{labels.style}</h2>
     </div>
-    <span class="panel-meta" data-current-preset>Light</span>
+    <span class="panel-meta" data-current-preset>{presetLabels[DEFAULT_PRESET_ID]}</span>
   </div>
 
   <div class="style-scroll">

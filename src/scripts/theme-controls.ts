@@ -1,7 +1,7 @@
 import type { PngExportOptions } from '../lib/export/png';
 import type { MermaidThemeOptions } from '../lib/mermaid/types';
 import { DEFAULT_DIAGRAM_FONT_FAMILY, DEFAULT_DIAGRAM_FONT_SIZE } from '../lib/theme/defaults';
-import { DEFAULT_PRESET_ID, defaultPreset, getPreset, toThemeVariables } from '../lib/theme/presets';
+import { DEFAULT_PRESET_ID, defaultPreset, getPreset, toThemeVariables, type PresetId } from '../lib/theme/presets';
 
 type ThemeControlsOptions = {
   workbench: HTMLElement;
@@ -14,6 +14,7 @@ type ThemeControlsOptions = {
   fontSelect?: HTMLSelectElement | null;
   transparentToggle?: HTMLInputElement | null;
   resetButton?: HTMLButtonElement | null;
+  presetLabels: Record<PresetId, string>;
   customPresetLabel: string;
   onChange: () => void;
 };
@@ -29,6 +30,7 @@ export const initThemeControls = ({
   fontSelect,
   transparentToggle,
   resetButton,
+  presetLabels,
   customPresetLabel,
   onChange,
 }: ThemeControlsOptions) => {
@@ -48,7 +50,7 @@ export const initThemeControls = ({
     if (!preset) return;
 
     workbench.dataset.preset = presetId;
-    currentPreset?.replaceChildren(document.createTextNode(presetId[0].toUpperCase() + presetId.slice(1)));
+    currentPreset?.replaceChildren(document.createTextNode(presetLabels[presetId as PresetId]));
     const variables = toThemeVariables(preset);
 
     Object.entries(variables).forEach(([name, value]) => workbench.style.setProperty(name, value));

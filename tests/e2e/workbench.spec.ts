@@ -1,7 +1,10 @@
 import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
+import { acceptDialogs } from './helpers';
 
 test.describe('Mermaid Styler workbench', () => {
+  test.beforeEach(({ page }) => acceptDialogs(page));
+
   test('loads the workbench with the expected controls', async ({ page }) => {
     await page.goto('/');
 
@@ -283,5 +286,23 @@ test.describe('Mermaid Styler workbench', () => {
     await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', 'ready', { timeout: 10_000 });
     await expect(page.locator('[data-source-feedback]')).toBeHidden();
     await expectSingleLiveRegion();
+  });
+
+  test('AUD-020: no scaffold copy in the shipped page', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', 'ready', { timeout: 10_000 });
+
+    await expect(page.getByText(/connects next|Scaffold|Example artifact|next phase|Renderer next/i)).toHaveCount(0);
+    await expect(page.locator('kbd')).toHaveCount(0);
+    await expect(page.locator('[data-scaffold-preview]')).toHaveCount(0);
+    await expect(page.locator('.app-footer').getByText('Paste Mermaid to start styling')).toBeHidden();
+    await expect(page.locator('[data-current-preset]')).toHaveText('Light');
+
+    await page.getByRole('option', { name: /Dark/ }).click();
+    await expect(page.locator('[data-current-preset]')).toHaveText('Dark');
+
+    await page.getByRole('textbox', { name: 'Source' }).fill('');
+    await expect(page.locator('[data-artifact-stage]')).toHaveAttribute('data-render-state', 'empty');
+    await expect(page.locator('.app-footer').getByText('Paste Mermaid to start styling')).toBeVisible();
   });
 });

@@ -385,25 +385,6 @@ input:focus-visible {
   line-height: 1.45;
 }
 
-.keyboard-hint {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  color: #607080;
-  font-family: var(--font-code);
-  font-size: 9px;
-  white-space: nowrap;
-}
-
-kbd {
-  padding: 2px 4px;
-  border: var(--border-thin) solid var(--line);
-  border-radius: 2px;
-  color: var(--steel-light);
-  background: var(--graphite-raised);
-  font: inherit;
-}
-
 .artifact-stage {
   min-height: 0;
   padding: var(--space-5);
@@ -591,14 +572,12 @@ kbd {
   background: rgba(11, 15, 20, 0.16);
 }
 
-.scaffold-preview,
 .rendered-diagram {
   display: grid;
   place-items: center;
   width: 100%;
 }
 
-.scaffold-preview[hidden],
 .rendered-diagram[hidden] {
   display: none;
 }
@@ -690,67 +669,6 @@ kbd {
 
 .artifact-stage.is-transparent .stage-surface {
   background: rgba(244, 241, 232, 0.55);
-}
-
-.sample-diagram {
-  width: min(100%, 760px);
-  height: auto;
-  overflow: visible;
-}
-
-.diagram-line {
-  stroke: var(--diagram-line);
-  stroke-width: 2;
-  vector-effect: non-scaling-stroke;
-}
-
-.diagram-arrow {
-  fill: none;
-  stroke: var(--diagram-line);
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 2;
-  vector-effect: non-scaling-stroke;
-}
-
-.diagram-node {
-  fill: var(--diagram-primary);
-  stroke: var(--diagram-border);
-  stroke-width: 2;
-  vector-effect: non-scaling-stroke;
-}
-
-.diagram-node--accent {
-  fill: var(--diagram-accent);
-}
-
-.diagram-port {
-  fill: var(--diagram-surface, var(--paper));
-  stroke: var(--diagram-border);
-  stroke-width: 2;
-}
-
-.diagram-label,
-.diagram-note {
-  fill: var(--diagram-text);
-  font-family: var(--diagram-font);
-  font-size: var(--diagram-font-size);
-  font-weight: 500;
-}
-
-.diagram-label--small {
-  font-family: var(--font-code);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-}
-
-.diagram-note {
-  fill: var(--diagram-border);
-  font-family: var(--font-code);
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .stage-caption {
@@ -995,6 +913,14 @@ kbd {
   letter-spacing: 0.03em;
 }
 
+.app-footer > .footer-empty-hint:first-child {
+  display: none;
+}
+
+[data-workbench][data-render-state="empty"] .app-footer > .footer-empty-hint:first-child {
+  display: inline-flex;
+}
+
 .app-footer > span:first-child {
   display: inline-flex;
   align-items: center;
@@ -1002,6 +928,7 @@ kbd {
 }
 
 .footer-meta {
+  margin-left: auto;
   display: inline-flex;
   align-items: center;
   gap: var(--space-4);

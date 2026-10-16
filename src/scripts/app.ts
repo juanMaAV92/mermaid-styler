@@ -24,7 +24,6 @@ if (workbench) {
   const sourceInput = workbench.querySelector<HTMLTextAreaElement>('[data-source-input]');
   const sourceCount = workbench.querySelector<HTMLElement>('[data-source-count]');
   const stage = workbench.querySelector<HTMLElement>('[data-artifact-stage]');
-  const scaffoldPreview = workbench.querySelector<HTMLElement>('[data-scaffold-preview]');
   const svgHost = workbench.querySelector<HTMLElement>('[data-svg-host]');
   const previewViewport = workbench.querySelector<HTMLElement>('[data-preview-viewport]');
   const previewLayer = workbench.querySelector<HTMLElement>('[data-preview-layer]');
@@ -118,6 +117,13 @@ if (workbench) {
     fontSelect,
     transparentToggle,
     resetButton,
+    presetLabels: {
+      light: messages.presetLight,
+      dark: messages.presetDark,
+      terminal: messages.presetTerminal,
+      paper: messages.presetPaper,
+      architecture: messages.presetArchitecture,
+    },
     customPresetLabel: messages.customPreset,
     onChange: () => requestRender(),
   });
@@ -135,7 +141,6 @@ if (workbench) {
       svgHost.replaceChildren();
       svgHost.hidden = true;
     }
-    if (scaffoldPreview) scaffoldPreview.hidden = false;
   };
 
   goToLineButton?.addEventListener('click', () => {
@@ -213,7 +218,6 @@ if (workbench) {
           outcome.result.bindFunctions?.(svgHost);
           svgHost.hidden = false;
         }
-        if (scaffoldPreview) scaffoldPreview.hidden = true;
         applyRenderState('ready', { hasArtifact: true });
       } catch (error) {
         if (requestToken === renderRequestToken) handleRenderError(error, requestToken);
@@ -236,6 +240,16 @@ if (workbench) {
   sourceInput?.addEventListener('blur', () => {
     lastSourceInputAt = Number.NEGATIVE_INFINITY;
     revealPendingError?.();
+  });
+
+  // D3: the source is never persisted. Warn before leaving only when the author changed it away from the sample.
+  const initialSource = sourceInput?.value ?? '';
+  let userEdited = false;
+  sourceInput?.addEventListener('input', () => { userEdited = true; });
+  window.addEventListener('beforeunload', (event) => {
+    if (!userEdited || sourceInput?.value === initialSource) return;
+    event.preventDefault();
+    event.returnValue = '';
   });
 
   const uiApi = {

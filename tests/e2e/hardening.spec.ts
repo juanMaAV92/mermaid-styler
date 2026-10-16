@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
+import { acceptDialogs } from './helpers';
 
 const fixtures = [
   {
@@ -42,6 +43,8 @@ const waitForReady = async (page: Page, previousSvgMarkup?: string) => {
 };
 
 test.describe('Mermaid Styler hardening', () => {
+  test.beforeEach(({ page }) => acceptDialogs(page));
+
   test('renders the supported diagram-family matrix', async ({ page }) => {
     await page.goto('/');
     const editor = page.getByRole('textbox', { name: 'Source' });

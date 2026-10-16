@@ -1,7 +1,10 @@
 import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
+import { acceptDialogs } from './helpers';
 
 test.describe('Cross-browser smoke', () => {
+  test.beforeEach(({ page }) => acceptDialogs(page));
+
   test('renders a diagram, applies a preset and preserves the last valid artifact', async ({ page }) => {
     await page.goto('/');
 
